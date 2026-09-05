@@ -222,6 +222,8 @@
     .global-search{ order:3; max-width:none; flex-basis:100%; }
   }
 </style>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
 </head>
 <body>
 
@@ -270,7 +272,12 @@
     <div class="global-search"><span class="gs-icon">⌕</span><input type="text" placeholder="Buscar PI, PO, DO, proveedor... en todo el sistema"></div>
     <div class="topbar-right">
       <button class="theme-toggle" id="themeToggle">🌙 Oscuro</button>
-      <div class="user-chip">Juan Felipe López · Administrador</div>
+      <select id="simRoleSelect" class="theme-toggle" style="cursor:pointer" onchange="setUserRole(this.value)">
+        <option value="Administrador">Ver como: Administrador</option>
+        <option value="Compras">Ver como: Compras</option>
+        <option value="Solo lectura">Ver como: Solo lectura</option>
+      </select>
+      <div class="user-chip" id="userChip">Juan Felipe López · Administrador</div>
     </div>
   </div>
 
@@ -294,6 +301,23 @@
       function agenciaNombre(codigo){
         const a = agenciasAduana.find(x => x.codigo === codigo);
         return a ? a.razonSocial : codigo;
+      }
+
+      // ---- Permisos por rol (misma matriz que Administración > Perfiles y Permisos) ----
+      let currentUserRole = 'Administrador';
+      let permisos = {
+        'Administrador': { proveedores:{ver:true, crear:true, editar:true, aprobar:true, cerrar:true} },
+        'Compras': { proveedores:{ver:true, crear:true, editar:true, aprobar:true, cerrar:false} },
+        'Solo lectura': { proveedores:{ver:true, crear:false, editar:false, aprobar:false, cerrar:false} },
+      };
+      function hasPermiso(modulo, accion){
+        const rol = permisos[currentUserRole];
+        return !!(rol && rol[modulo] && rol[modulo][accion]);
+      }
+      function setUserRole(rol){
+        currentUserRole = rol;
+        document.getElementById('userChip').textContent = 'Juan Felipe López · ' + rol;
+        renderProveedores();
       }
     </script>
 
@@ -494,8 +518,17 @@
     <div class="panel" id="panel-proveedores">
       <div class="toolbar">
         <input class="search-input" id="provSearch" placeholder="Buscar proveedor..." oninput="renderProveedores()">
-        <div style="display:flex; gap:8px"><button class="btn btn-export">⬇ Exportar</button><button class="btn btn-primary" onclick="openProveedorForm()">+ Vincular proveedor</button></div>
+        <div style="display:flex; gap:8px">
+          <button class="btn btn-export" onclick="exportProveedorTemplate()">⬇ Exportar plantilla en blanco</button>
+          <label class="btn btn-export" style="cursor:pointer; margin:0">
+            ⬆ Importar formulario diligenciado
+            <input type="file" id="provImportFile" accept=".xlsx,.xls" style="display:none" onchange="importProveedorFile(event)">
+          </label>
+          <button class="btn btn-primary" id="btnVincularProveedor" onclick="openProveedorForm()">+ Vincular proveedor</button>
+        </div>
       </div>
+      <div class="section-desc">Exporta la plantilla en blanco para que el proveedor la diligencie, o importa una ya diligenciada para llenar automáticamente todos los campos del formulario — igual al Excel que ya usan hoy.</div>
+
       <div class="table-card"><table>
         <thead><tr><th>Código</th><th>Razón social</th><th>País</th><th>Fabricante</th><th>Nivel riesgo</th><th>Habilitado PO</th><th>Estado</th><th>Acciones</th></tr></thead>
         <tbody id="provTableBody"></tbody>
@@ -504,16 +537,49 @@
       <div class="section" id="provFormSection" style="display:none">
         <div class="section-title" id="provFormTitle">Vincular proveedor</div>
         <div class="alert-list" id="provFormError" style="display:none">
-          <div class="alert-row on"><span class="ai">⚠</span> Razón social y país son obligatorios.</div>
+          <div class="alert-row on"><span class="ai">⚠</span> Razón social, país y NIT/registro son obligatorios.</div>
         </div>
+        <div class="alert-list" id="provPoRuleBox"></div>
+
+        <div class="section-title" style="font-size:12.5px">Información del proveedor</div>
         <div class="field-row">
           <div class="field"><label>Razón social *</label><input id="provRazonSocial"></div>
+          <div class="field"><label>Nombre comercial</label><input id="provNombreComercial"></div>
+          <div class="field"><label>Tipo de proveedor</label><select id="provTipo"><option>Fabricante</option><option>Distribuidor</option><option>Trading</option></select></div>
+          <div class="field"><label>NIT / registro tributario *</label><input id="provTaxId"></div>
           <div class="field"><label>País *</label><input id="provPais"></div>
+          <div class="field"><label>Ciudad</label><input id="provCiudad"></div>
+          <div class="field"><label>Dirección registrada</label><input id="provDireccion"></div>
+          <div class="field"><label>Página web</label><input id="provWeb"></div>
           <div class="field"><label>¿Es fabricante?</label><select id="provFabricante"><option>Sí</option><option>No</option></select></div>
+          <div class="field"><label>Dirección de fábrica</label><input id="provDireccionFabrica"></div>
           <div class="field"><label>Nivel de riesgo</label><select id="provRiesgo"><option>Bajo</option><option>Medio</option><option>Alto</option></select></div>
-          <div class="field"><label>Habilitado para emitir PO</label><select id="provHabilitadoPO"><option>No</option><option>Sí</option></select></div>
-          <div class="field"><label>Estado</label><select id="provEstado"><option>En validación</option><option>Aprobado</option><option>Bloqueado</option></select></div>
+          <div class="field"><label>Observaciones internas</label><input id="provObservaciones"></div>
         </div>
+
+        <div class="section-title" style="font-size:12.5px">Contactos</div>
+        <div class="field-row">
+          <div class="field"><label>Contacto comercial</label><input id="provContComercial"></div>
+          <div class="field"><label>Cargo</label><input id="provContComercialCargo"></div>
+          <div class="field"><label>Correo</label><input id="provContComercialEmail"></div>
+          <div class="field"><label>Teléfono</label><input id="provContComercialTel"></div>
+          <div class="field"><label>Contacto comercio exterior</label><input id="provContComex"></div>
+          <div class="field"><label>Contacto calidad / garantía</label><input id="provContCalidad"></div>
+          <div class="field"><label>Contacto contabilidad</label><input id="provContContabilidad"></div>
+        </div>
+
+        <div class="section-title" style="font-size:12.5px">Información bancaria</div>
+        <div class="field-row">
+          <div class="field"><label>Nombre del beneficiario</label><input id="provBancoBeneficiario"></div>
+          <div class="field"><label>Banco</label><input id="provBancoNombre"></div>
+          <div class="field"><label>Dirección del banco</label><input id="provBancoDireccion"></div>
+          <div class="field"><label>País del banco</label><input id="provBancoPais"></div>
+          <div class="field"><label>Cuenta / IBAN</label><input id="provBancoCuenta"></div>
+          <div class="field"><label>SWIFT / BIC</label><input id="provBancoSwift"></div>
+          <div class="field"><label>Banco intermediario</label><input id="provBancoIntermediario"></div>
+          <div class="field"><label>Moneda de la cuenta</label><input id="provBancoMoneda"></div>
+        </div>
+
         <div class="section-title" style="font-size:12.5px">Condiciones comerciales y capacidad</div>
         <div class="field-row">
           <div class="field"><label>Incoterm habitual</label><select id="provIncoterm"><option>FOB</option><option>CIF</option><option>EXW</option></select></div>
@@ -523,11 +589,43 @@
           <div class="field"><label>Categorías de producto</label><input id="provCategorias" placeholder="Refrigeración, Lavado"></div>
           <div class="field"><label>MOQ</label><input id="provMoq" placeholder="500 unidades"></div>
         </div>
-        <div class="section-desc">Nota: esta ficha cubre los campos esenciales para operar. El formulario completo (contactos, información bancaria, documentos obligatorios con vigencia) sigue el detalle del spec original — pendiente de ampliar en una próxima corrección si se necesita aquí mismo.</div>
-        <div class="btn-row">
-          <button class="btn btn-ghost" onclick="closeProveedorForm()">Cancelar</button>
-          <button class="btn btn-primary" onclick="saveProveedor()">Guardar</button>
+
+        <div class="toolbar" style="margin-bottom:6px"><div class="section-title" style="margin:0; font-size:12.5px">Documentos obligatorios (12)</div><span class="badge warn" id="provDocsCounter">0 de 12 vigentes</span></div>
+        <div class="doc-list" id="provDocsList"></div>
+
+        <div class="section-title" style="font-size:12.5px">Validación de cumplimiento</div>
+        <div class="doc-list">
+          <div class="doc-row" style="grid-template-columns:auto 1fr auto; cursor:pointer" onclick="toggleProvCumplimiento('restrictivas', this)">
+            <div class="doc-check" id="chk-restrictivas" data-key="restrictivas">✓</div>
+            <div><div class="doc-name">Listas restrictivas verificadas</div></div>
+          </div>
+          <div class="doc-row" style="grid-template-columns:auto 1fr auto; cursor:pointer" onclick="toggleProvCumplimiento('conflicto', this)">
+            <div class="doc-check" id="chk-conflicto" data-key="conflicto">✓</div>
+            <div><div class="doc-name">Declaración de conflicto de interés</div></div>
+          </div>
+          <div class="doc-row" style="grid-template-columns:auto 1fr auto; cursor:pointer" onclick="toggleProvCumplimiento('cuentaVerificada', this)">
+            <div class="doc-check" id="chk-cuentaVerificada" data-key="cuentaVerificada">✓</div>
+            <div><div class="doc-name">Cuenta bancaria verificada independientemente</div></div>
+          </div>
         </div>
+
+        <div class="section-title" style="font-size:12.5px">Aprobaciones internas</div>
+        <div class="table-card"><table>
+          <thead><tr><th>Área</th><th>Responsable</th><th>Decisión</th></tr></thead>
+          <tbody>
+            <tr><td>Compras</td><td><input id="provAprobCompras" style="border:none; background:transparent; width:100%"></td>
+              <td><select id="provDecCompras" onchange="updatePoRule()"><option>Pendiente</option><option>Aprobado</option><option>Rechazado</option></select></td></tr>
+            <tr><td>Comercio Exterior</td><td><input id="provAprobComex" style="border:none; background:transparent; width:100%"></td>
+              <td><select id="provDecComex" onchange="updatePoRule()"><option>Pendiente</option><option>Aprobado</option><option>Rechazado</option></select></td></tr>
+            <tr><td>Jurídica / Cumplimiento</td><td><input id="provAprobJuridica" style="border:none; background:transparent; width:100%"></td>
+              <td><select id="provDecJuridica" onchange="updatePoRule()"><option>Pendiente</option><option>Aprobado</option><option>Rechazado</option></select></td></tr>
+          </tbody>
+        </table></div>
+
+        <div class="alert-list" id="provReadonlyNotice" style="display:none">
+          <div class="alert-row off"><span class="ai">👁</span> Tu perfil tiene permiso de solo lectura sobre Proveedores — no puedes editar campos, cambiar estado de documentos, ni adjuntar soportes.</div>
+        </div>
+        <div class="btn-row"><button class="btn btn-ghost" onclick="closeProveedorForm()">Cancelar</button><button class="btn btn-primary" id="provSaveBtn" onclick="saveProveedor()">Guardar</button></div>
       </div>
 
       <div class="history-box" id="provHistoryBox" style="display:none">
@@ -537,18 +635,61 @@
     </div>
 
     <script>
+      const PROV_DOCS = [
+        'Company registration / Registro mercantil',
+        'Tax registration / Registro tributario',
+        'Legal representative ID / Identificación representante',
+        'Bank certificate / Certificación bancaria',
+        'ISO 9001 certificate',
+        'Product certificates / Certificados producto',
+        'Laboratory reports / Informes laboratorio',
+        'Technical sheets and manuals / Fichas y manuales',
+        'Manufacturer declaration / Declaración fabricante',
+        'Supplier due diligence form / Conocimiento proveedor',
+        'Source of funds declaration / Origen de fondos',
+        'Data processing authorization / Tratamiento de datos',
+      ];
+
+      function nuevoDocsProveedor(){
+        return PROV_DOCS.map(nombre => ({ nombre, estado:'Pendiente', archivo:null })); // Pendiente | Vigente | Vencido
+      }
+
       let proveedores = [
-        { codigo:'PROV-014', razonSocial:'Midea Electric', pais:'China', fabricante:'Sí', riesgo:'Bajo', habilitadoPO:'Sí', estado:'Aprobado',
+        { codigo:'PROV-014', razonSocial:'Midea Electric', nombreComercial:'Midea', tipo:'Fabricante', taxId:'91-102233445', pais:'China', ciudad:'Foshan',
+          direccion:'', web:'www.midea.com', fabricante:'Sí', direccionFabrica:'Foshan Industrial Park', riesgo:'Bajo', observaciones:'',
+          contComercial:'Wei Zhang', contComercialCargo:'Export Manager', contComercialEmail:'wei.zhang@midea.com', contComercialTel:'+86 757 2223 4455',
+          contComex:'Lily Chen', contCalidad:'Quality Dept.', contContabilidad:'Finance Dept.',
+          bancoBeneficiario:'Midea Electric Co. Ltd', bancoNombre:'Bank of China', bancoDireccion:'', bancoPais:'China',
+          bancoCuenta:'CN00 0000 0000 0000', bancoSwift:'BKCHCNBJ', bancoIntermediario:'', bancoMoneda:'USD',
           incoterm:'FOB', anticipo:'30%', tiempoProd:'45 días', vigenciaPrecios:'90 días', categorias:'Refrigeración, Lavado', moq:'500 unidades',
+          docs: PROV_DOCS.map(nombre => ({nombre, estado:'Vigente'})),
+          cumplimiento:{ restrictivas:true, conflicto:true, cuentaVerificada:true },
+          aprobaciones:{ compras:{responsable:'M. C. Ortiz', decision:'Aprobado'}, comex:{responsable:'E. Torres', decision:'Aprobado'}, juridica:{responsable:'Legal', decision:'Aprobado'} },
+          estado:'Aprobado', habilitadoPO:'Sí',
           historial:[
             {fecha:'2025-12-20 11:30', accion:'Aprobó proveedor tras validación de cumplimiento', usuario:'M. C. Ortiz'},
             {fecha:'2025-12-18 16:45', accion:'Cargó certificado ISO 9001', usuario:'M. C. Ortiz'},
           ]},
-        { codigo:'PROV-021', razonSocial:'Whirlpool', pais:'México', fabricante:'Sí', riesgo:'Bajo', habilitadoPO:'Sí', estado:'Aprobado',
+        { codigo:'PROV-021', razonSocial:'Whirlpool', nombreComercial:'Whirlpool', tipo:'Fabricante', taxId:'MX-556677', pais:'México', ciudad:'Monterrey',
+          direccion:'', web:'www.whirlpool.com', fabricante:'Sí', direccionFabrica:'', riesgo:'Bajo', observaciones:'',
+          contComercial:'Ana López', contComercialCargo:'Sales Manager', contComercialEmail:'ana.lopez@whirlpool.com', contComercialTel:'+52 81 1234 5678',
+          contComex:'', contCalidad:'', contContabilidad:'',
+          bancoBeneficiario:'', bancoNombre:'', bancoDireccion:'', bancoPais:'', bancoCuenta:'', bancoSwift:'', bancoIntermediario:'', bancoMoneda:'USD',
           incoterm:'CIF', anticipo:'20%', tiempoProd:'30 días', vigenciaPrecios:'60 días', categorias:'Lavado', moq:'300 unidades',
+          docs: nuevoDocsProveedor(),
+          cumplimiento:{ restrictivas:true, conflicto:false, cuentaVerificada:false },
+          aprobaciones:{ compras:{responsable:'M. C. Ortiz', decision:'Aprobado'}, comex:{responsable:'', decision:'Pendiente'}, juridica:{responsable:'', decision:'Pendiente'} },
+          estado:'Aprobado', habilitadoPO:'Sí',
           historial:[{fecha:'2025-11-02 10:00', accion:'Aprobó proveedor', usuario:'M. C. Ortiz'}] },
-        { codigo:'PROV-033', razonSocial:'Samsung LatAm', pais:'Corea del Sur', fabricante:'No', riesgo:'Medio', habilitadoPO:'No', estado:'En validación',
+        { codigo:'PROV-033', razonSocial:'Samsung LatAm', nombreComercial:'Samsung', tipo:'Fabricante', taxId:'', pais:'Corea del Sur', ciudad:'Seúl',
+          direccion:'', web:'', fabricante:'No', direccionFabrica:'', riesgo:'Medio', observaciones:'Pendiente definir condiciones comerciales',
+          contComercial:'', contComercialCargo:'', contComercialEmail:'', contComercialTel:'', contComex:'', contCalidad:'', contContabilidad:'',
+          bancoBeneficiario:'', bancoNombre:'', bancoDireccion:'', bancoPais:'', bancoCuenta:'', bancoSwift:'', bancoIntermediario:'', bancoMoneda:'',
           incoterm:'FOB', anticipo:'', tiempoProd:'', vigenciaPrecios:'', categorias:'Electrónica', moq:'',
+          docs: nuevoDocsProveedor(),
+          cumplimiento:{ restrictivas:false, conflicto:false, cuentaVerificada:false },
+          aprobaciones:{ compras:{responsable:'', decision:'Pendiente'}, comex:{responsable:'', decision:'Pendiente'}, juridica:{responsable:'', decision:'Pendiente'} },
+          estado:'En validación', habilitadoPO:'No',
           historial:[{fecha:'2026-01-15 09:20', accion:'Inició proceso de vinculación', usuario:'M. C. Ortiz'}] },
       ];
       let provEditingCodigo = null;
@@ -557,12 +698,33 @@
       function badgeClassSiNo(v){ return v === 'Sí' ? 'ok' : (v === 'No' ? 'danger' : 'gray'); }
       function badgeClassEstadoProv(e){ return e === 'Aprobado' ? 'ok' : (e === 'En validación' ? 'warn' : 'danger'); }
 
+      // Regla del sistema (tomada literal del Excel): Habilitado para PO solo si
+      // las 3 áreas aprobaron, la cuenta bancaria fue verificada, y los 12
+      // documentos obligatorios están vigentes. Nadie la marca a mano.
+      function calcularHabilitadoPO(p){
+        const aprobacionesOk = ['compras','comex','juridica'].every(a => p.aprobaciones[a].decision === 'Aprobado');
+        const cuentaOk = !!p.cumplimiento.cuentaVerificada;
+        const docsOk = p.docs.every(d => d.estado === 'Vigente');
+        return (aprobacionesOk && cuentaOk && docsOk) ? 'Sí' : 'No';
+      }
+      function calcularEstado(p){
+        if (['compras','comex','juridica'].some(a => p.aprobaciones[a].decision === 'Rechazado')) return 'Bloqueado';
+        if (['compras','comex','juridica'].every(a => p.aprobaciones[a].decision === 'Aprobado')) return 'Aprobado';
+        return 'En validación';
+      }
+
       function renderProveedores(){
         const term = (document.getElementById('provSearch').value || '').toLowerCase();
         const tbody = document.getElementById('provTableBody');
         const filtered = proveedores.filter(p =>
           p.razonSocial.toLowerCase().includes(term) || p.pais.toLowerCase().includes(term) || p.codigo.toLowerCase().includes(term)
         );
+        const puedeEditar = hasPermiso('proveedores','editar');
+        const puedeCrear = hasPermiso('proveedores','crear');
+        const btnCrear = document.getElementById('btnVincularProveedor');
+        if (btnCrear){
+          btnCrear.style.display = puedeCrear ? 'inline-block' : 'none';
+        }
         tbody.innerHTML = filtered.map(p => `
           <tr>
             <td>${p.codigo}</td><td>${p.razonSocial}</td><td>${p.pais}</td>
@@ -570,48 +732,173 @@
             <td><span class="badge ${badgeClassRiesgo(p.riesgo)}">${p.riesgo}</span></td>
             <td><span class="badge ${badgeClassSiNo(p.habilitadoPO)}">${p.habilitadoPO}</span></td>
             <td><span class="badge ${badgeClassEstadoProv(p.estado)}">${p.estado}</span></td>
-            <td><span class="icon-btn icon-view" onclick="viewProveedor('${p.codigo}')">⊕</span></td>
+            <td>${puedeEditar
+              ? `<span class="icon-btn icon-edit" onclick="viewProveedor('${p.codigo}')" title="Ver y editar">✎</span>`
+              : `<span class="icon-btn icon-view" onclick="viewProveedor('${p.codigo}')" title="Solo lectura — tu perfil no tiene permiso de edición">⊕</span>`}</td>
           </tr>
         `).join('') || '<tr><td colspan="8" style="text-align:center; color:var(--text-faint)">Sin resultados</td></tr>';
+      }
+
+      function renderProvDocsList(docs){
+        const list = document.getElementById('provDocsList');
+        const puedeEditar = hasPermiso('proveedores','editar');
+        list.innerHTML = docs.map((d, idx) => `
+          <div class="doc-row">
+            <div class="doc-check ${d.estado === 'Vigente' ? 'on' : ''}" ${puedeEditar ? `onclick="cycleProvDoc(${idx})" style="cursor:pointer"` : ''}>${d.estado === 'Vigente' ? '✓' : ''}</div>
+            <div>
+              <div class="doc-name">${d.nombre}</div>
+              <div class="doc-req">${d.archivo ? '📎 ' + d.archivo : 'Sin adjunto'}</div>
+            </div>
+            <span class="badge ${d.estado === 'Vigente' ? 'ok' : (d.estado === 'Vencido' ? 'danger' : 'warn')}" ${puedeEditar ? `onclick="cycleProvDoc(${idx})" style="cursor:pointer"` : ''}>${d.estado}</span>
+            ${puedeEditar ? `
+              <label class="doc-action" style="cursor:pointer; margin:0">
+                Adjuntar
+                <input type="file" style="display:none" onchange="attachProvDoc(${idx}, event)">
+              </label>
+            ` : '<span class="doc-action" style="color:var(--text-faint)">Solo lectura</span>'}
+          </div>
+        `).join('');
+        const vigentes = docs.filter(d => d.estado === 'Vigente').length;
+        document.getElementById('provDocsCounter').textContent = `${vigentes} de ${docs.length} vigentes`;
+        document.getElementById('provDocsCounter').className = 'badge ' + (vigentes === docs.length ? 'ok' : 'warn');
+      }
+
+      let provDocsTemp = [];
+      let provCumplimientoTemp = { restrictivas:false, conflicto:false, cuentaVerificada:false };
+
+      function cycleProvDoc(idx){
+        if (!hasPermiso('proveedores','editar')) return;
+        const orden = ['Pendiente','Vigente','Vencido'];
+        const i = orden.indexOf(provDocsTemp[idx].estado);
+        provDocsTemp[idx].estado = orden[(i + 1) % orden.length];
+        renderProvDocsList(provDocsTemp);
+        updatePoRule();
+      }
+
+      function attachProvDoc(idx, evt){
+        const file = evt.target.files[0];
+        if (!file) return;
+        provDocsTemp[idx].archivo = file.name;
+        // Adjuntar el soporte no cambia el estado solo — sigue habiendo que
+        // confirmarlo como vigente, para no dar por bueno un archivo sin revisar.
+        renderProvDocsList(provDocsTemp);
+      }
+
+      function toggleProvCumplimiento(key, rowEl){
+        provCumplimientoTemp[key] = !provCumplimientoTemp[key];
+        rowEl.querySelector('.doc-check').classList.toggle('on');
+        updatePoRule();
+      }
+
+      function updatePoRule(){
+        const p = {
+          docs: provDocsTemp,
+          cumplimiento: provCumplimientoTemp,
+          aprobaciones: {
+            compras:{decision: document.getElementById('provDecCompras').value},
+            comex:{decision: document.getElementById('provDecComex').value},
+            juridica:{decision: document.getElementById('provDecJuridica').value},
+          }
+        };
+        const habilitado = calcularHabilitadoPO(p);
+        const box = document.getElementById('provPoRuleBox');
+        if (habilitado === 'Sí'){
+          box.innerHTML = '<div class="alert-row off"><span class="ai">✓</span> Cumple la regla del sistema — puede quedar habilitado para emitir PO.</div>';
+        } else {
+          const faltantes = [];
+          if (p.aprobaciones.compras.decision !== 'Aprobado') faltantes.push('aprobación de Compras');
+          if (p.aprobaciones.comex.decision !== 'Aprobado') faltantes.push('aprobación de Comercio Exterior');
+          if (p.aprobaciones.juridica.decision !== 'Aprobado') faltantes.push('aprobación Jurídica');
+          if (!p.cumplimiento.cuentaVerificada) faltantes.push('verificación independiente de cuenta bancaria');
+          const docsPendientes = p.docs.filter(d => d.estado !== 'Vigente').length;
+          if (docsPendientes) faltantes.push(docsPendientes + ' documento(s) sin estar vigentes');
+          box.innerHTML = `<div class="alert-row on"><span class="ai">⚠</span> "Crear PO" permanece deshabilitado — falta: ${faltantes.join(', ')}.</div>`;
+        }
       }
 
       function openProveedorForm(){
         provEditingCodigo = null;
         document.getElementById('provFormTitle').textContent = 'Vincular proveedor';
-        ['provRazonSocial','provPais','provAnticipo','provTiempoProd','provVigenciaPrecios','provCategorias','provMoq'].forEach(id => document.getElementById(id).value = '');
+        ['provRazonSocial','provNombreComercial','provTaxId','provPais','provCiudad','provDireccion','provWeb','provDireccionFabrica','provObservaciones',
+         'provContComercial','provContComercialCargo','provContComercialEmail','provContComercialTel','provContComex','provContCalidad','provContContabilidad',
+         'provBancoBeneficiario','provBancoNombre','provBancoDireccion','provBancoPais','provBancoCuenta','provBancoSwift','provBancoIntermediario','provBancoMoneda',
+         'provAnticipo','provTiempoProd','provVigenciaPrecios','provCategorias','provMoq','provAprobCompras','provAprobComex','provAprobJuridica'
+        ].forEach(id => document.getElementById(id).value = '');
+        document.getElementById('provTipo').value = 'Fabricante';
         document.getElementById('provFabricante').value = 'Sí';
         document.getElementById('provRiesgo').value = 'Bajo';
-        document.getElementById('provHabilitadoPO').value = 'No';
-        document.getElementById('provEstado').value = 'En validación';
         document.getElementById('provIncoterm').value = 'FOB';
+        document.getElementById('provBancoMoneda').value = 'USD';
+        document.getElementById('provDecCompras').value = 'Pendiente';
+        document.getElementById('provDecComex').value = 'Pendiente';
+        document.getElementById('provDecJuridica').value = 'Pendiente';
         document.getElementById('provFormError').style.display = 'none';
+        provDocsTemp = nuevoDocsProveedor();
+        provCumplimientoTemp = { restrictivas:false, conflicto:false, cuentaVerificada:false };
+        renderProvDocsList(provDocsTemp);
+        ['restrictivas','conflicto','cuentaVerificada'].forEach(k => document.getElementById('chk-' + k).classList.remove('on'));
+        updatePoRule();
         document.getElementById('provFormSection').style.display = 'block';
         document.getElementById('provHistoryBox').style.display = 'none';
+        applyProveedorFormPermission();
         document.getElementById('provRazonSocial').focus();
       }
 
       function closeProveedorForm(){ document.getElementById('provFormSection').style.display = 'none'; }
 
-      function saveProveedor(){
-        const razonSocial = document.getElementById('provRazonSocial').value.trim();
-        const pais = document.getElementById('provPais').value.trim();
-        if (!razonSocial || !pais){
-          document.getElementById('provFormError').style.display = 'block';
-          return;
-        }
-        const data = {
-          razonSocial, pais,
+      function readProveedorForm(){
+        return {
+          razonSocial: document.getElementById('provRazonSocial').value.trim(),
+          nombreComercial: document.getElementById('provNombreComercial').value.trim(),
+          tipo: document.getElementById('provTipo').value,
+          taxId: document.getElementById('provTaxId').value.trim(),
+          pais: document.getElementById('provPais').value.trim(),
+          ciudad: document.getElementById('provCiudad').value.trim(),
+          direccion: document.getElementById('provDireccion').value.trim(),
+          web: document.getElementById('provWeb').value.trim(),
           fabricante: document.getElementById('provFabricante').value,
+          direccionFabrica: document.getElementById('provDireccionFabrica').value.trim(),
           riesgo: document.getElementById('provRiesgo').value,
-          habilitadoPO: document.getElementById('provHabilitadoPO').value,
-          estado: document.getElementById('provEstado').value,
+          observaciones: document.getElementById('provObservaciones').value.trim(),
+          contComercial: document.getElementById('provContComercial').value.trim(),
+          contComercialCargo: document.getElementById('provContComercialCargo').value.trim(),
+          contComercialEmail: document.getElementById('provContComercialEmail').value.trim(),
+          contComercialTel: document.getElementById('provContComercialTel').value.trim(),
+          contComex: document.getElementById('provContComex').value.trim(),
+          contCalidad: document.getElementById('provContCalidad').value.trim(),
+          contContabilidad: document.getElementById('provContContabilidad').value.trim(),
+          bancoBeneficiario: document.getElementById('provBancoBeneficiario').value.trim(),
+          bancoNombre: document.getElementById('provBancoNombre').value.trim(),
+          bancoDireccion: document.getElementById('provBancoDireccion').value.trim(),
+          bancoPais: document.getElementById('provBancoPais').value.trim(),
+          bancoCuenta: document.getElementById('provBancoCuenta').value.trim(),
+          bancoSwift: document.getElementById('provBancoSwift').value.trim(),
+          bancoIntermediario: document.getElementById('provBancoIntermediario').value.trim(),
+          bancoMoneda: document.getElementById('provBancoMoneda').value.trim(),
           incoterm: document.getElementById('provIncoterm').value,
           anticipo: document.getElementById('provAnticipo').value.trim(),
           tiempoProd: document.getElementById('provTiempoProd').value.trim(),
           vigenciaPrecios: document.getElementById('provVigenciaPrecios').value.trim(),
           categorias: document.getElementById('provCategorias').value.trim(),
           moq: document.getElementById('provMoq').value.trim(),
+          docs: provDocsTemp.map(d => ({...d})),
+          cumplimiento: {...provCumplimientoTemp},
+          aprobaciones: {
+            compras:{responsable: document.getElementById('provAprobCompras').value.trim(), decision: document.getElementById('provDecCompras').value},
+            comex:{responsable: document.getElementById('provAprobComex').value.trim(), decision: document.getElementById('provDecComex').value},
+            juridica:{responsable: document.getElementById('provAprobJuridica').value.trim(), decision: document.getElementById('provDecJuridica').value},
+          },
         };
+      }
+
+      function saveProveedor(){
+        const data = readProveedorForm();
+        if (!data.razonSocial || !data.pais || !data.taxId){
+          document.getElementById('provFormError').style.display = 'block';
+          return;
+        }
+        data.estado = calcularEstado(data);
+        data.habilitadoPO = calcularHabilitadoPO(data);
         const now = new Date().toISOString().slice(0,16).replace('T',' ');
 
         if (provEditingCodigo){
@@ -633,23 +920,374 @@
         provEditingCodigo = p.codigo;
         document.getElementById('provFormTitle').textContent = 'Editar — ' + p.razonSocial;
         document.getElementById('provRazonSocial').value = p.razonSocial;
+        document.getElementById('provNombreComercial').value = p.nombreComercial || '';
+        document.getElementById('provTipo').value = p.tipo || 'Fabricante';
+        document.getElementById('provTaxId').value = p.taxId || '';
         document.getElementById('provPais').value = p.pais;
+        document.getElementById('provCiudad').value = p.ciudad || '';
+        document.getElementById('provDireccion').value = p.direccion || '';
+        document.getElementById('provWeb').value = p.web || '';
         document.getElementById('provFabricante').value = p.fabricante;
+        document.getElementById('provDireccionFabrica').value = p.direccionFabrica || '';
         document.getElementById('provRiesgo').value = p.riesgo;
-        document.getElementById('provHabilitadoPO').value = p.habilitadoPO;
-        document.getElementById('provEstado').value = p.estado;
+        document.getElementById('provObservaciones').value = p.observaciones || '';
+        document.getElementById('provContComercial').value = p.contComercial || '';
+        document.getElementById('provContComercialCargo').value = p.contComercialCargo || '';
+        document.getElementById('provContComercialEmail').value = p.contComercialEmail || '';
+        document.getElementById('provContComercialTel').value = p.contComercialTel || '';
+        document.getElementById('provContComex').value = p.contComex || '';
+        document.getElementById('provContCalidad').value = p.contCalidad || '';
+        document.getElementById('provContContabilidad').value = p.contContabilidad || '';
+        document.getElementById('provBancoBeneficiario').value = p.bancoBeneficiario || '';
+        document.getElementById('provBancoNombre').value = p.bancoNombre || '';
+        document.getElementById('provBancoDireccion').value = p.bancoDireccion || '';
+        document.getElementById('provBancoPais').value = p.bancoPais || '';
+        document.getElementById('provBancoCuenta').value = p.bancoCuenta || '';
+        document.getElementById('provBancoSwift').value = p.bancoSwift || '';
+        document.getElementById('provBancoIntermediario').value = p.bancoIntermediario || '';
+        document.getElementById('provBancoMoneda').value = p.bancoMoneda || '';
         document.getElementById('provIncoterm').value = p.incoterm;
         document.getElementById('provAnticipo').value = p.anticipo;
         document.getElementById('provTiempoProd').value = p.tiempoProd;
         document.getElementById('provVigenciaPrecios').value = p.vigenciaPrecios;
         document.getElementById('provCategorias').value = p.categorias;
         document.getElementById('provMoq').value = p.moq;
+        document.getElementById('provAprobCompras').value = p.aprobaciones.compras.responsable || '';
+        document.getElementById('provDecCompras').value = p.aprobaciones.compras.decision;
+        document.getElementById('provAprobComex').value = p.aprobaciones.comex.responsable || '';
+        document.getElementById('provDecComex').value = p.aprobaciones.comex.decision;
+        document.getElementById('provAprobJuridica').value = p.aprobaciones.juridica.responsable || '';
+        document.getElementById('provDecJuridica').value = p.aprobaciones.juridica.decision;
+        provDocsTemp = p.docs.map(d => ({...d}));
+        provCumplimientoTemp = {...p.cumplimiento};
+        renderProvDocsList(provDocsTemp);
+        ['restrictivas','conflicto','cuentaVerificada'].forEach(k => document.getElementById('chk-' + k).classList.toggle('on', !!provCumplimientoTemp[k]));
+        updatePoRule();
         document.getElementById('provFormError').style.display = 'none';
         document.getElementById('provFormSection').style.display = 'block';
         document.getElementById('provHistoryBox').style.display = 'block';
         document.getElementById('provHistoryLog').innerHTML = p.historial.map(h => `
           <div class="hist-row"><span class="hist-time">${h.fecha}</span><span class="hist-action">${h.accion}</span><span class="hist-user">${h.usuario}</span></div>
         `).join('');
+        applyProveedorFormPermission();
+      }
+
+      // Bloquea el formulario entero a solo lectura cuando el perfil del
+      // usuario no tiene permiso de "Editar" sobre Proveedores — se aplica
+      // igual estés creando o abriendo uno existente.
+      function applyProveedorFormPermission(){
+        const puedeEditar = hasPermiso('proveedores','editar');
+        const form = document.getElementById('provFormSection');
+        form.querySelectorAll('input, select').forEach(el => { el.disabled = !puedeEditar; });
+        const saveBtn = document.getElementById('provSaveBtn');
+        if (saveBtn){
+          saveBtn.style.display = puedeEditar ? 'inline-block' : 'none';
+        }
+        const readonlyNotice = document.getElementById('provReadonlyNotice');
+        if (readonlyNotice){
+          readonlyNotice.style.display = puedeEditar ? 'none' : 'block';
+        }
+        renderProvDocsList(provDocsTemp); // re-renderiza para mostrar/ocultar "Adjuntar"
+      }
+
+      // ---- Exportar plantilla — formato real con ExcelJS, verificado celda por celda ----
+      const XL_DARK = {type:'pattern', pattern:'solid', fgColor:{argb:'FF1F1F1F'}};
+      const XL_BLACK = {type:'pattern', pattern:'solid', fgColor:{argb:'FF0A0A0A'}};
+      const XL_GRAY_LABEL = {type:'pattern', pattern:'solid', fgColor:{argb:'FFD9D9D9'}};
+      const XL_GRAY_VALUE = {type:'pattern', pattern:'solid', fgColor:{argb:'FFF2F2F2'}};
+      const XL_WHITE_BOLD_16 = {name:'Arial', size:16, bold:true, color:{argb:'FFFFFFFF'}};
+      const XL_WHITE_BOLD_10 = {name:'Arial', size:10, bold:true, color:{argb:'FFFFFFFF'}};
+      const XL_GRAY_TEXT_8 = {name:'Arial', size:8, bold:false, color:{argb:'FFD9D9D9'}};
+      const XL_WHITE_BOLD_9 = {name:'Arial', size:9, bold:true, color:{argb:'FFFFFFFF'}};
+      const XL_WHITE_BOLD_8 = {name:'Arial', size:8, bold:true, color:{argb:'FFFFFFFF'}};
+      const XL_LABEL_FONT = {name:'Arial', size:8, bold:true, color:{argb:'FF222222'}};
+      const XL_VALUE_FONT = {name:'Arial', size:9, bold:false, color:{argb:'FF222222'}};
+      const XL_BORDER_GRAY = {style:'thin', color:{argb:'FFA6A6A6'}};
+      const XL_BORDER_WHITE = {style:'thin', color:{argb:'FFFFFFFF'}};
+      const XL_BORDER_DARK = {style:'thin', color:{argb:'FF0A0A0A'}};
+      const BOX_GRAY = {top:XL_BORDER_GRAY, bottom:XL_BORDER_GRAY, left:XL_BORDER_GRAY, right:XL_BORDER_GRAY};
+      const BOX_WHITE = {top:XL_BORDER_WHITE, bottom:XL_BORDER_WHITE, left:XL_BORDER_WHITE, right:XL_BORDER_WHITE};
+      const BOX_DARK = {top:XL_BORDER_DARK, bottom:XL_BORDER_DARK, left:XL_BORDER_DARK, right:XL_BORDER_DARK};
+
+      function xlSectionHeader(ws, r, leftText, rightText){
+        ws.mergeCells(`A${r}:E${r}`);
+        ws.getCell(`A${r}`).value = leftText;
+        ws.getCell(`A${r}`).font = XL_WHITE_BOLD_9; ws.getCell(`A${r}`).fill = XL_DARK;
+        ws.getCell(`A${r}`).alignment = {vertical:'center', wrapText:true}; ws.getCell(`A${r}`).border = BOX_DARK;
+        if (rightText){
+          ws.mergeCells(`F${r}:J${r}`);
+          ws.getCell(`F${r}`).value = rightText;
+          ws.getCell(`F${r}`).font = XL_WHITE_BOLD_9; ws.getCell(`F${r}`).fill = XL_DARK;
+          ws.getCell(`F${r}`).alignment = {vertical:'center', wrapText:true}; ws.getCell(`F${r}`).border = BOX_DARK;
+        }
+        ws.getRow(r).height = 22;
+      }
+
+      function xlFieldRow(ws, r, leftLabel, leftValue, rightLabel, rightValue){
+        ws.mergeCells(`A${r}:B${r}`);
+        ws.getCell(`A${r}`).value = leftLabel;
+        ws.getCell(`A${r}`).font = XL_LABEL_FONT; ws.getCell(`A${r}`).fill = XL_GRAY_LABEL;
+        ws.getCell(`A${r}`).alignment = {vertical:'center', wrapText:true}; ws.getCell(`A${r}`).border = BOX_GRAY;
+        ws.mergeCells(`C${r}:E${r}`);
+        ws.getCell(`C${r}`).value = leftValue || '';
+        ws.getCell(`C${r}`).font = XL_VALUE_FONT; ws.getCell(`C${r}`).fill = XL_GRAY_VALUE;
+        ws.getCell(`C${r}`).alignment = {vertical:'center', wrapText:true}; ws.getCell(`C${r}`).border = BOX_GRAY;
+        if (rightLabel){
+          ws.mergeCells(`F${r}:G${r}`);
+          ws.getCell(`F${r}`).value = rightLabel;
+          ws.getCell(`F${r}`).font = XL_LABEL_FONT; ws.getCell(`F${r}`).fill = XL_GRAY_LABEL;
+          ws.getCell(`F${r}`).alignment = {vertical:'center', wrapText:true}; ws.getCell(`F${r}`).border = BOX_GRAY;
+          ws.mergeCells(`H${r}:J${r}`);
+          ws.getCell(`H${r}`).value = rightValue || '';
+          ws.getCell(`H${r}`).font = XL_VALUE_FONT; ws.getCell(`H${r}`).fill = XL_GRAY_VALUE;
+          ws.getCell(`H${r}`).alignment = {vertical:'center', wrapText:true}; ws.getCell(`H${r}`).border = BOX_GRAY;
+        }
+        ws.getRow(r).height = 22;
+      }
+
+      async function exportProveedorTemplate(){
+        if (typeof ExcelJS === 'undefined'){
+          alert('No se pudo cargar la librería de formato (ExcelJS) desde el CDN. Revisa tu conexión a internet o si un firewall/bloqueador está impidiendo cargar cdn.jsdelivr.net, y vuelve a intentarlo.');
+          return;
+        }
+        try {
+          await exportProveedorTemplateInner();
+        } catch (err){
+          console.error('Error exportando plantilla de proveedor:', err);
+          alert('Ocurrió un error generando el Excel. Detalle técnico (revisa la consola F12 para más): ' + err.message);
+        }
+      }
+
+      async function exportProveedorTemplateInner(){
+        const p = provEditingCodigo ? proveedores.find(x => x.codigo === provEditingCodigo) : null;
+        const wb = new ExcelJS.Workbook();
+        const ws = wb.addWorksheet('Supplier Registration');
+        // Anchos exactos del archivo real — D, E, F sin ancho custom (quedan en default ~8.43)
+        ws.getColumn(1).width = 8;  ws.getColumn(2).width = 23; ws.getColumn(3).width = 17;
+        ws.getColumn(7).width = 21; ws.getColumn(8).width = 17; ws.getColumn(9).width = 18; ws.getColumn(10).width = 24;
+
+        // ---- Título (filas 1-3) ----
+        ws.mergeCells('A1:C3'); ws.getCell('A1').fill = XL_BLACK;
+        ws.mergeCells('D1:J1'); ws.getCell('D1').value = 'JLC ELECTRONICS';
+        ws.getCell('D1').font = XL_WHITE_BOLD_16; ws.getCell('D1').fill = XL_BLACK; ws.getCell('D1').alignment = {horizontal:'center', vertical:'center'};
+        ws.mergeCells('D2:J2'); ws.getCell('D2').value = 'INTERNATIONAL SUPPLIER REGISTRATION / VINCULACIÓN DE PROVEEDOR INTERNACIONAL';
+        ws.getCell('D2').font = XL_WHITE_BOLD_10; ws.getCell('D2').fill = XL_BLACK; ws.getCell('D2').alignment = {horizontal:'center', vertical:'center'};
+        ws.mergeCells('D3:J3'); ws.getCell('D3').value = 'JL & RB S.A.S.  |  NIT 900738718  |  Vive bien, vive mejor';
+        ws.getCell('D3').font = XL_GRAY_TEXT_8; ws.getCell('D3').fill = XL_BLACK; ws.getCell('D3').alignment = {horizontal:'center', vertical:'center'};
+        ws.getRow(1).height = 34; ws.getRow(2).height = 28; ws.getRow(3).height = 23;
+
+        // ---- Fila 5 — Información del proveedor + Control de vinculación ----
+        xlSectionHeader(ws, 5, 'SUPPLIER INFORMATION / INFORMACIÓN DEL PROVEEDOR', 'REGISTRATION CONTROL / CONTROL DE VINCULACIÓN');
+        xlFieldRow(ws, 6, 'Legal name / Razón social', p?.razonSocial, 'Supplier code / Código', p?.codigo || '(se asigna al guardar)');
+        xlFieldRow(ws, 7, 'Trade name / Nombre comercial', p?.nombreComercial, 'Creation date / Fecha creación', p?.historial?.length ? p.historial[p.historial.length-1].fecha : '');
+        xlFieldRow(ws, 8, 'Supplier type / Tipo proveedor', p?.tipo, 'Requested by / Solicitado por', p?.historial?.length ? p.historial[p.historial.length-1].usuario : '');
+        xlFieldRow(ws, 9, 'Tax or registration ID', p?.taxId, 'Status / Estado', p?.estado);
+        xlFieldRow(ws, 10, 'Country-City / País-Ciudad', [p?.pais, p?.ciudad].filter(Boolean).join('-'), 'Review date / Fecha revisión', '');
+        xlFieldRow(ws, 11, 'Registered address / Dirección', p?.direccion, 'Next update / Próxima actualización', '');
+        xlFieldRow(ws, 12, 'Website', p?.web, 'Risk level / Nivel de riesgo', p?.riesgo);
+        xlFieldRow(ws, 13, 'Manufacturer? / ¿Fabricante?', p?.fabricante, 'Approved for PO? / ¿Habilitado PO?', p?.habilitadoPO);
+        xlFieldRow(ws, 14, 'Factory address / Dirección planta', p?.direccionFabrica, 'Internal observations', p?.observaciones);
+        ws.getRow(15).height = 22;
+
+        // ---- Fila 16 — Contactos + Condiciones comerciales ----
+        xlSectionHeader(ws, 16, 'CONTACTS / CONTACTOS', 'COMMERCIAL CONDITIONS / CONDICIONES COMERCIALES');
+        xlFieldRow(ws, 17, 'Commercial contact / Contacto comercial', p?.contComercial, 'Currency / Moneda', p?.bancoMoneda);
+        xlFieldRow(ws, 18, 'Position / Cargo', p?.contComercialCargo, 'Usual Incoterm 2020', p?.incoterm);
+        xlFieldRow(ws, 19, 'Email', p?.contComercialEmail, 'Named place / Lugar convenido', '');
+        xlFieldRow(ws, 20, 'Telephone / Teléfono', p?.contComercialTel, 'Port of loading / Puerto embarque', '');
+        xlFieldRow(ws, 21, 'Foreign trade contact / Comercio exterior', p?.contComex, 'Payment terms / Forma de pago', '');
+        xlFieldRow(ws, 22, 'Quality-Warranty contact / Calidad-Garantía', p?.contCalidad, 'Advance payment % / Anticipo', p?.anticipo);
+        xlFieldRow(ws, 23, 'Accounting contact / Contabilidad', p?.contContabilidad, 'Production lead time / Tiempo producción', p?.tiempoProd);
+        ws.getRow(24).height = 22;
+
+        // ---- Fila 25 — Información bancaria + Capacidad de suministro ----
+        xlSectionHeader(ws, 25, 'BANK INFORMATION / INFORMACIÓN BANCARIA', 'SUPPLY CAPACITY / CAPACIDAD DE SUMINISTRO');
+        xlFieldRow(ws, 26, 'Beneficiary name / Beneficiario', p?.bancoBeneficiario, 'Product categories / Categorías', p?.categorias);
+        xlFieldRow(ws, 27, 'Bank name / Banco', p?.bancoNombre, 'Monthly capacity / Capacidad mensual', '');
+        xlFieldRow(ws, 28, 'Bank address / Dirección banco', p?.bancoDireccion, 'Minimum order-MOQ', p?.moq);
+        xlFieldRow(ws, 29, 'Bank country / País banco', p?.bancoPais, 'Price validity / Vigencia precio', p?.vigenciaPrecios);
+        xlFieldRow(ws, 30, 'Account-IBAN', p?.bancoCuenta, 'Warranty / Garantía', '');
+        xlFieldRow(ws, 31, 'SWIFT-BIC', p?.bancoSwift, 'Spare-parts support / Soporte repuestos', '');
+        xlFieldRow(ws, 32, 'Intermediary bank / Banco intermediario', p?.bancoIntermediario, 'Samples available? / ¿Muestras?', '');
+        xlFieldRow(ws, 33, 'Account currency / Moneda cuenta', p?.bancoMoneda, 'Factory audit available? / ¿Auditoría?', '');
+        ws.getRow(34).height = 22;
+
+        // ---- Fila 35 — Control documental (tabla) ----
+        xlSectionHeader(ws, 35, 'DOCUMENT CONTROL / CONTROL DOCUMENTAL');
+        const headerRow36 = ['No.', 'Document / Documento', 'Required / Obligatorio', 'Status / Estado'];
+        headerRow36.forEach((text, i) => {
+          const cell = ws.getCell(36, i+1);
+          cell.value = text;
+          cell.font = XL_WHITE_BOLD_8; cell.fill = XL_BLACK;
+          cell.alignment = {horizontal:'center', vertical:'center', wrapText:true};
+          cell.border = BOX_WHITE;
+        });
+        ws.getRow(36).height = 32;
+        PROV_DOCS.forEach((doc, i) => {
+          const r = 37 + i;
+          const estado = (p?.docs?.[i]) ? p.docs[i].estado : 'Pendiente';
+          const estadoTexto = estado === 'Vigente' ? 'Valid / Vigente' : (estado === 'Vencido' ? 'Expired / Vencido' : 'Pending / Pendiente');
+          const values = [i+1, doc, 'Yes / Sí', estadoTexto];
+          for (let c=1;c<=4;c++){
+            const cell = ws.getCell(r,c);
+            cell.value = values[c-1];
+            cell.font = XL_VALUE_FONT; cell.fill = XL_GRAY_VALUE;
+            cell.alignment = {vertical:'top', wrapText:true};
+            cell.border = BOX_GRAY;
+          }
+          ws.getRow(r).height = 31;
+        });
+        ws.getRow(49).height = 22;
+
+        // ---- Fila 50 — Validación de cumplimiento (6 puntos, 2 columnas) ----
+        ws.mergeCells('A50:J50'); ws.getCell('A50').value = 'COMPLIANCE REVIEW / VALIDACIÓN DE CUMPLIMIENTO';
+        ws.getCell('A50').font = XL_WHITE_BOLD_9; ws.getCell('A50').fill = XL_DARK;
+        ws.getCell('A50').alignment = {vertical:'center', wrapText:true}; ws.getCell('A50').border = BOX_DARK;
+        ws.getRow(50).height = 22;
+
+        function complianceRow(r, leftLabel, leftVal, rightLabel, rightVal){
+          ws.mergeCells(`A${r}:C${r}`); ws.getCell(`A${r}`).value = leftLabel;
+          ws.getCell(`A${r}`).font = XL_LABEL_FONT; ws.getCell(`A${r}`).fill = XL_GRAY_LABEL;
+          ws.getCell(`A${r}`).alignment = {vertical:'center', wrapText:true}; ws.getCell(`A${r}`).border = BOX_GRAY;
+
+          ws.mergeCells(`D${r}:E${r}`); ws.getCell(`D${r}`).value = leftVal;
+          ws.getCell(`D${r}`).font = XL_VALUE_FONT; ws.getCell(`D${r}`).fill = XL_GRAY_VALUE;
+          ws.getCell(`D${r}`).alignment = {vertical:'center', wrapText:true}; ws.getCell(`D${r}`).border = BOX_GRAY;
+
+          ws.mergeCells(`F${r}:H${r}`); ws.getCell(`F${r}`).value = rightLabel;
+          ws.getCell(`F${r}`).font = XL_LABEL_FONT; ws.getCell(`F${r}`).fill = XL_GRAY_LABEL;
+          ws.getCell(`F${r}`).alignment = {vertical:'center', wrapText:true}; ws.getCell(`F${r}`).border = BOX_GRAY;
+
+          ws.mergeCells(`I${r}:J${r}`); ws.getCell(`I${r}`).value = rightVal;
+          ws.getCell(`I${r}`).font = XL_VALUE_FONT; ws.getCell(`I${r}`).fill = XL_GRAY_VALUE;
+          ws.getCell(`I${r}`).alignment = {vertical:'center', wrapText:true}; ws.getCell(`I${r}`).border = BOX_GRAY;
+
+          ws.getRow(r).height = 22;
+        }
+        complianceRow(51, 'Restricted lists checked / Listas restrictivas', p?.cumplimiento?.restrictivas ? 'Yes / Sí' : 'Pending / Pendiente', 'Ultimate beneficial owner identified / Beneficiario final', 'Pending / Pendiente');
+        complianceRow(52, 'Conflict of interest declaration / Conflicto interés', p?.cumplimiento?.conflicto ? 'Yes / Sí' : 'Pending / Pendiente', 'Commercial references checked / Referencias', 'Pending / Pendiente');
+        complianceRow(53, 'Bank account independently verified / Cuenta verificada', p?.cumplimiento?.cuentaVerificada ? 'Yes / Sí' : 'Pending / Pendiente', 'Final recommendation / Recomendación', 'Pending / Pendiente');
+        ws.getRow(54).height = 22;
+
+        // ---- Fila 55 — Aprobaciones internas (tabla) ----
+        ws.mergeCells('A55:J55'); ws.getCell('A55').value = 'INTERNAL APPROVALS / APROBACIONES INTERNAS';
+        ws.getCell('A55').font = XL_WHITE_BOLD_9; ws.getCell('A55').fill = XL_DARK;
+        ws.getCell('A55').alignment = {vertical:'center', wrapText:true}; ws.getCell('A55').border = BOX_DARK;
+        ws.getRow(55).height = 22;
+
+        ['Area / Área','Responsible / Responsable','Decision / Decisión'].forEach((text,i) => {
+          const cell = ws.getCell(56, i+1);
+          cell.value = text; cell.font = XL_WHITE_BOLD_8; cell.fill = XL_BLACK;
+          cell.alignment = {horizontal:'center', vertical:'center', wrapText:true};
+          cell.border = BOX_WHITE;
+        });
+        ws.getRow(56).height = 30;
+
+        const aprobRows = [
+          ['Purchasing / Compras', p?.aprobaciones?.compras],
+          ['Foreign Trade / Comercio Exterior', p?.aprobaciones?.comex],
+          ['Legal-Compliance / Jurídica', p?.aprobaciones?.juridica],
+        ];
+        aprobRows.forEach(([area, ap], i) => {
+          const r = 57 + i;
+          const values = [area, ap?.responsable || '', ap?.decision ? (ap.decision === 'Pendiente' ? 'Pending / Pendiente' : ap.decision) : 'Pending / Pendiente'];
+          for (let c=1;c<=3;c++){
+            const cell = ws.getCell(r,c);
+            cell.value = values[c-1];
+            cell.font = XL_VALUE_FONT; cell.fill = XL_GRAY_VALUE;
+            cell.alignment = {vertical:'center', wrapText:true};
+            cell.border = BOX_GRAY;
+          }
+          ws.getRow(r).height = 22;
+        });
+        ws.getRow(60).height = 22;
+
+        // ---- Regla del sistema (61-62) ----
+        ws.mergeCells('A61:J62');
+        ws.getCell('A61').value = 'SYSTEM RULE / REGLA DEL SISTEMA: The Create PO action must remain disabled until the supplier status is Approved, the bank account has been independently verified, and all mandatory documents are valid. / La opción Crear PO permanecerá deshabilitada hasta que el proveedor esté aprobado, la cuenta bancaria haya sido verificada y los documentos obligatorios estén vigentes.';
+        ws.getCell('A61').font = XL_WHITE_BOLD_9; ws.getCell('A61').fill = XL_BLACK;
+        ws.getCell('A61').alignment = {horizontal:'center', vertical:'center', wrapText:true};
+        ws.getCell('A61').border = BOX_DARK;
+        ws.getRow(61).height = 32; ws.getRow(62).height = 32;
+
+        const nombreArchivo = p ? `Proveedor_${p.codigo}.xlsx` : 'Formulario_Vinculacion_Proveedor_Internacional_JLC.xlsx';
+        const buffer = await wb.xlsx.writeBuffer();
+        const blob = new Blob([buffer], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = nombreArchivo; a.click();
+        URL.revokeObjectURL(url);
+      }
+
+      // ---- Importar formulario diligenciado ----
+      function importProveedorFile(evt){
+        const file = evt.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(e){
+          const data = new Uint8Array(e.target.result);
+          const wb = XLSX.read(data, {type:'array'});
+          const ws = wb.Sheets[wb.SheetNames[0]];
+          const rows = XLSX.utils.sheet_to_json(ws, {header:1});
+          fillProveedorFormFromRows(rows);
+        };
+        reader.readAsArrayBuffer(file);
+        evt.target.value = '';
+      }
+
+      function findRowValue(rows, label){
+        const row = rows.find(r => r[0] && String(r[0]).trim().toLowerCase() === label.toLowerCase());
+        // La etiqueta ocupa A:B combinado y el valor vive en C:E combinado —
+        // en el array plano de SheetJS eso corresponde al índice 2, no al 1.
+        return row ? (row[2] ?? '') : '';
+      }
+
+      function fillProveedorFormFromRows(rows){
+        openProveedorForm();
+        document.getElementById('provRazonSocial').value = findRowValue(rows, 'Legal name / Razón social');
+        document.getElementById('provNombreComercial').value = findRowValue(rows, 'Trade name / Nombre comercial');
+        document.getElementById('provTaxId').value = findRowValue(rows, 'Tax or registration ID');
+        const countryCity = findRowValue(rows, 'Country-City / País-Ciudad');
+        const [pais, ciudad] = String(countryCity).split('-');
+        document.getElementById('provPais').value = (pais || '').trim();
+        document.getElementById('provCiudad').value = (ciudad || '').trim();
+        document.getElementById('provDireccion').value = findRowValue(rows, 'Registered address / Dirección');
+        document.getElementById('provWeb').value = findRowValue(rows, 'Website');
+        const fab = findRowValue(rows, 'Manufacturer? / ¿Fabricante?');
+        if (fab) document.getElementById('provFabricante').value = fab;
+        document.getElementById('provDireccionFabrica').value = findRowValue(rows, 'Factory address / Dirección planta');
+
+        document.getElementById('provContComercial').value = findRowValue(rows, 'Commercial contact / Contacto comercial');
+        document.getElementById('provContComercialCargo').value = findRowValue(rows, 'Position / Cargo');
+        document.getElementById('provContComercialEmail').value = findRowValue(rows, 'Email');
+        document.getElementById('provContComercialTel').value = findRowValue(rows, 'Telephone / Teléfono');
+        document.getElementById('provContComex').value = findRowValue(rows, 'Foreign trade contact / Comercio exterior');
+        document.getElementById('provContCalidad').value = findRowValue(rows, 'Quality-Warranty contact / Calidad-Garantía');
+        document.getElementById('provContContabilidad').value = findRowValue(rows, 'Accounting contact / Contabilidad');
+
+        document.getElementById('provBancoBeneficiario').value = findRowValue(rows, 'Beneficiary name / Beneficiario');
+        document.getElementById('provBancoNombre').value = findRowValue(rows, 'Bank name / Banco');
+        document.getElementById('provBancoDireccion').value = findRowValue(rows, 'Bank address / Dirección banco');
+        document.getElementById('provBancoPais').value = findRowValue(rows, 'Bank country / País banco');
+        document.getElementById('provBancoCuenta').value = findRowValue(rows, 'Account-IBAN');
+        document.getElementById('provBancoSwift').value = findRowValue(rows, 'SWIFT-BIC');
+        document.getElementById('provBancoIntermediario').value = findRowValue(rows, 'Intermediary bank / Banco intermediario');
+        document.getElementById('provBancoMoneda').value = findRowValue(rows, 'Account currency / Moneda cuenta');
+
+        // Documentos: toma el estado de la 4a columna si el proveedor ya lo trae; si no, Pendiente
+        const docsHeaderIdx = rows.findIndex(r => r[0] === 'No.' && r[1] && String(r[1]).includes('Document'));
+        if (docsHeaderIdx >= 0){
+          for (let i = 0; i < PROV_DOCS.length; i++){
+            const row = rows[docsHeaderIdx + 1 + i];
+            if (row && provDocsTemp[i]){
+              provDocsTemp[i].estado = (row[3] && String(row[3]).toLowerCase().includes('vigente')) ? 'Vigente' : 'Pendiente';
+            }
+          }
+          renderProvDocsList(provDocsTemp);
+        }
+
+        updatePoRule();
+        document.getElementById('provFormTitle').textContent = 'Nuevo proveedor — importado desde Excel';
       }
 
       renderProveedores();
