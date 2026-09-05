@@ -276,6 +276,27 @@
 
   <div class="wrap">
 
+    <script>
+      // Fuente única de agencias de aduana — la usan tanto Importadores
+      // (selección múltiple) como la Matriz de Agencias de Aduana.
+      let agenciasAduana = [
+        { codigo:'ADU-001', razonSocial:'Aduanimex S.A. Nivel 1', nit:'800.112.334-2', ciudad:'Buenaventura', sla:'2 días', nivelServicio:'Alto', estado:'Activa',
+          contactos:[
+            { nombre:'María Fernanda Ríos', cargo:'Comercio Exterior', telefono:'+57 318 243 4779', correo:'mrios@aduanimex.com' },
+            { nombre:'Carlos Peña', cargo:'Gerente de Operaciones', telefono:'+57 601 555 0192', correo:'cpena@aduanimex.com' },
+          ]},
+        { codigo:'ADU-002', razonSocial:'Aduanas del Pacífico Ltda.', nit:'805.221.109-5', ciudad:'Cartagena', sla:'3 días', nivelServicio:'Medio', estado:'Activa',
+          contactos:[
+            { nombre:'Andrés Salcedo', cargo:'Operaciones', telefono:'+57 315 220 9911', correo:'operaciones@adupacifico.com' },
+          ]},
+        { codigo:'ADU-003', razonSocial:'Global Trade Colombia SAS', nit:'901.004.556-7', ciudad:'Bogotá', sla:'—', nivelServicio:'Sin evaluar', estado:'En revisión', contactos:[] },
+      ];
+      function agenciaNombre(codigo){
+        const a = agenciasAduana.find(x => x.codigo === codigo);
+        return a ? a.razonSocial : codigo;
+      }
+    </script>
+
     <!-- ============ IMPORTADORES ============ -->
     <div class="panel active" id="panel-importadores">
       <div class="toolbar">
@@ -296,10 +317,12 @@
           <div class="field"><label>Razón social *</label><input id="impRazonSocial"></div>
           <div class="field"><label>NIT *</label><input id="impNit"></div>
           <div class="field"><label>Ciudad</label><input id="impCiudad"></div>
-          <div class="field"><label>Agencia de aduanas habitual</label><input id="impAgencia" value="Aduanimex S.A. Nivel 1"></div>
           <div class="field"><label>Depósito / bodega autorizada</label><input id="impBodega" value="TCBUEN Buenaventura"></div>
           <div class="field"><label>Estado</label><select id="impEstado"><option>Activo</option><option>Inactivo</option><option>Bloqueado</option></select></div>
         </div>
+        <div class="section-title" style="font-size:12.5px">Agencias de aduana habituales <span style="font-weight:400; color:var(--text-faint)">— una empresa puede tener más de una</span></div>
+        <div class="doc-list" id="impAgenciasList"></div>
+        <div class="section-desc" style="margin-top:8px">¿Falta una agencia en la lista? Créala primero en <span class="trace-pill" onclick="goTab('mataduanas')" style="cursor:pointer">Matriz Agencias Aduana</span> y vuelve aquí.</div>
         <div class="btn-row">
           <button class="btn btn-ghost" onclick="closeImportadorForm()">Cancelar</button>
           <button class="btn btn-primary" id="impSaveBtn" onclick="saveImportador()">Guardar</button>
@@ -316,12 +339,12 @@
 
     <script>
       let importadores = [
-        { codigo:'IMP-001', razonSocial:'JL Y RB SAS', nit:'900.738.718-1', ciudad:'Bogotá', agencia:'Aduanimex S.A. Nivel 1', bodega:'TCBUEN Buenaventura', estado:'Activo',
+        { codigo:'IMP-001', razonSocial:'JL Y RB SAS', nit:'900.738.718-1', ciudad:'Bogotá', agencias:['ADU-001','ADU-002'], bodega:'TCBUEN Buenaventura', estado:'Activo',
           historial:[
             {fecha:'2026-01-02 09:14', accion:'Actualizó agencia de aduanas habitual', usuario:'J. F. López'},
             {fecha:'2025-11-18 14:02', accion:'Creó el registro del importador', usuario:'J. F. López'},
           ]},
-        { codigo:'IMP-002', razonSocial:'FRATELLI COLOMBIA SAS', nit:'901.225.430-3', ciudad:'Medellín', agencia:'Aduanimex S.A. Nivel 1', bodega:'', estado:'Activo',
+        { codigo:'IMP-002', razonSocial:'FRATELLI COLOMBIA SAS', nit:'901.225.430-3', ciudad:'Medellín', agencias:['ADU-001'], bodega:'', estado:'Activo',
           historial:[{fecha:'2025-10-02 11:00', accion:'Creó el registro del importador', usuario:'J. F. López'}] },
       ];
       let impEditingCodigo = null;
@@ -330,6 +353,11 @@
         if (estado === 'Activo') return 'ok';
         if (estado === 'Inactivo') return 'gray';
         return 'danger';
+      }
+
+      function renderAgenciasBadges(codigos){
+        if (!codigos || !codigos.length) return '—';
+        return codigos.map(c => `<span class="badge blue" style="margin:1px">${agenciaNombre(c)}</span>`).join(' ');
       }
 
       function renderImportadores(){
@@ -341,7 +369,7 @@
         tbody.innerHTML = filtered.map(i => `
           <tr>
             <td>${i.codigo}</td><td>${i.razonSocial}</td><td>${i.nit}</td><td>${i.ciudad || '—'}</td>
-            <td>${i.agencia || '—'}</td><td><span class="badge ${badgeClassEstado(i.estado)}">${i.estado}</span></td>
+            <td>${renderAgenciasBadges(i.agencias)}</td><td><span class="badge ${badgeClassEstado(i.estado)}">${i.estado}</span></td>
             <td>
               <span class="icon-btn icon-view" onclick="viewImportador('${i.codigo}')">⊕</span>
               <span class="icon-btn icon-edit" onclick="editImportador('${i.codigo}')">✎</span>
@@ -350,18 +378,38 @@
         `).join('') || '<tr><td colspan="7" style="text-align:center; color:var(--text-faint)">Sin resultados</td></tr>';
       }
 
+      function renderImpAgenciasChecklist(selected){
+        selected = selected || [];
+        document.getElementById('impAgenciasList').innerHTML = agenciasAduana.map(a => `
+          <div class="doc-row" style="grid-template-columns:auto 1fr auto; cursor:pointer" onclick="toggleImpAgencia('${a.codigo}', this)">
+            <div class="doc-check ${selected.includes(a.codigo) ? 'on' : ''}" data-codigo="${a.codigo}">✓</div>
+            <div><div class="doc-name">${a.razonSocial}</div><div class="doc-req">${a.ciudad} · SLA ${a.sla}</div></div>
+            <span class="badge ${a.estado === 'Activa' ? 'ok' : 'warn'}">${a.estado}</span>
+          </div>
+        `).join('');
+      }
+
+      function toggleImpAgencia(codigo, rowEl){
+        const check = rowEl.querySelector('.doc-check');
+        check.classList.toggle('on');
+      }
+
+      function getSelectedAgencias(){
+        return Array.from(document.querySelectorAll('#impAgenciasList .doc-check.on')).map(el => el.dataset.codigo);
+      }
+
       function openImportadorForm(){
         impEditingCodigo = null;
         document.getElementById('impFormTitle').textContent = 'Nuevo importador';
         document.getElementById('impRazonSocial').value = '';
         document.getElementById('impNit').value = '';
         document.getElementById('impCiudad').value = '';
-        document.getElementById('impAgencia').value = 'Aduanimex S.A. Nivel 1';
         document.getElementById('impBodega').value = 'TCBUEN Buenaventura';
         document.getElementById('impEstado').value = 'Activo';
         document.getElementById('impFormError').style.display = 'none';
         document.getElementById('impSaveBtn').disabled = false;
         document.getElementById('impSaveBtn').classList.remove('btn-disabled');
+        renderImpAgenciasChecklist([]);
         document.getElementById('impFormSection').style.display = 'block';
         document.getElementById('impHistoryBox').style.display = 'none';
         document.getElementById('impRazonSocial').focus();
@@ -381,7 +429,7 @@
         const data = {
           razonSocial, nit,
           ciudad: document.getElementById('impCiudad').value.trim(),
-          agencia: document.getElementById('impAgencia').value.trim(),
+          agencias: getSelectedAgencias(),
           bodega: document.getElementById('impBodega').value.trim(),
           estado: document.getElementById('impEstado').value,
         };
@@ -406,9 +454,9 @@
         document.getElementById('impRazonSocial').value = i.razonSocial;
         document.getElementById('impNit').value = i.nit;
         document.getElementById('impCiudad').value = i.ciudad || '';
-        document.getElementById('impAgencia').value = i.agencia || '';
         document.getElementById('impBodega').value = i.bodega || '';
         document.getElementById('impEstado').value = i.estado;
+        renderImpAgenciasChecklist(i.agencias);
         document.getElementById('impFormError').style.display = 'none';
         document.getElementById('impFormSection').style.display = 'block';
       }
@@ -444,37 +492,168 @@
 
     <!-- ============ PROVEEDORES ============ -->
     <div class="panel" id="panel-proveedores">
-      <div class="toolbar"><input class="search-input" placeholder="Buscar proveedor..."><div style="display:flex; gap:8px"><button class="btn btn-export">⬇ Exportar</button><button class="btn btn-primary">+ Vincular proveedor</button></div></div>
+      <div class="toolbar">
+        <input class="search-input" id="provSearch" placeholder="Buscar proveedor..." oninput="renderProveedores()">
+        <div style="display:flex; gap:8px"><button class="btn btn-export">⬇ Exportar</button><button class="btn btn-primary" onclick="openProveedorForm()">+ Vincular proveedor</button></div>
+      </div>
       <div class="table-card"><table>
         <thead><tr><th>Código</th><th>Razón social</th><th>País</th><th>Fabricante</th><th>Nivel riesgo</th><th>Habilitado PO</th><th>Estado</th><th>Acciones</th></tr></thead>
-        <tbody>
-          <tr><td>PROV-014</td><td>Midea Electric</td><td>China</td><td><span class="badge ok">Sí</span></td><td><span class="badge ok">Bajo</span></td><td><span class="badge ok">Sí</span></td><td><span class="badge ok">Aprobado</span></td><td><span class="icon-btn icon-view">⊕</span></td></tr>
-          <tr><td>PROV-021</td><td>Whirlpool</td><td>México</td><td><span class="badge ok">Sí</span></td><td><span class="badge ok">Bajo</span></td><td><span class="badge ok">Sí</span></td><td><span class="badge ok">Aprobado</span></td><td><span class="icon-btn icon-view">⊕</span></td></tr>
-          <tr><td>PROV-033</td><td>Samsung LatAm</td><td>Corea del Sur</td><td><span class="badge gray">No</span></td><td><span class="badge warn">Medio</span></td><td><span class="badge danger">No</span></td><td><span class="badge warn">En validación</span></td><td><span class="icon-btn icon-view">⊕</span></td></tr>
-        </tbody>
+        <tbody id="provTableBody"></tbody>
       </table></div>
-      <div class="section">
-        <div class="section-title">Condiciones comerciales y capacidad — Midea Electric</div>
-        <div class="field-row">
-          <div class="field"><label>Incoterm habitual</label><select><option>FOB</option><option>CIF</option><option>EXW</option></select></div>
-          <div class="field"><label>% de anticipo</label><input value="30%"></div>
-          <div class="field"><label>Tiempo de producción</label><input value="45 días"></div>
-          <div class="field"><label>Vigencia de precios</label><input value="90 días"></div>
-          <div class="field"><label>Categorías de producto</label><input value="Refrigeración, Lavado"></div>
-          <div class="field"><label>MOQ</label><input value="500 unidades"></div>
+
+      <div class="section" id="provFormSection" style="display:none">
+        <div class="section-title" id="provFormTitle">Vincular proveedor</div>
+        <div class="alert-list" id="provFormError" style="display:none">
+          <div class="alert-row on"><span class="ai">⚠</span> Razón social y país son obligatorios.</div>
         </div>
-        <div class="doc-list">
-          <div class="doc-row"><div class="doc-check on">✓</div><div><div class="doc-name">ISO 9001</div><div class="doc-req">Vence 14/03/2027</div></div><span class="badge ok">Vigente</span><span class="doc-action">Ver</span></div>
+        <div class="field-row">
+          <div class="field"><label>Razón social *</label><input id="provRazonSocial"></div>
+          <div class="field"><label>País *</label><input id="provPais"></div>
+          <div class="field"><label>¿Es fabricante?</label><select id="provFabricante"><option>Sí</option><option>No</option></select></div>
+          <div class="field"><label>Nivel de riesgo</label><select id="provRiesgo"><option>Bajo</option><option>Medio</option><option>Alto</option></select></div>
+          <div class="field"><label>Habilitado para emitir PO</label><select id="provHabilitadoPO"><option>No</option><option>Sí</option></select></div>
+          <div class="field"><label>Estado</label><select id="provEstado"><option>En validación</option><option>Aprobado</option><option>Bloqueado</option></select></div>
+        </div>
+        <div class="section-title" style="font-size:12.5px">Condiciones comerciales y capacidad</div>
+        <div class="field-row">
+          <div class="field"><label>Incoterm habitual</label><select id="provIncoterm"><option>FOB</option><option>CIF</option><option>EXW</option></select></div>
+          <div class="field"><label>% de anticipo</label><input id="provAnticipo" placeholder="30%"></div>
+          <div class="field"><label>Tiempo de producción</label><input id="provTiempoProd" placeholder="45 días"></div>
+          <div class="field"><label>Vigencia de precios</label><input id="provVigenciaPrecios" placeholder="90 días"></div>
+          <div class="field"><label>Categorías de producto</label><input id="provCategorias" placeholder="Refrigeración, Lavado"></div>
+          <div class="field"><label>MOQ</label><input id="provMoq" placeholder="500 unidades"></div>
+        </div>
+        <div class="section-desc">Nota: esta ficha cubre los campos esenciales para operar. El formulario completo (contactos, información bancaria, documentos obligatorios con vigencia) sigue el detalle del spec original — pendiente de ampliar en una próxima corrección si se necesita aquí mismo.</div>
+        <div class="btn-row">
+          <button class="btn btn-ghost" onclick="closeProveedorForm()">Cancelar</button>
+          <button class="btn btn-primary" onclick="saveProveedor()">Guardar</button>
         </div>
       </div>
-      <div class="history-box">
+
+      <div class="history-box" id="provHistoryBox" style="display:none">
         <div class="history-head" onclick="this.nextElementSibling.classList.toggle('open')"><div class="history-title">Historial de modificaciones</div><div class="history-toggle">Ver ▾</div></div>
-        <div class="history-log">
-          <div class="hist-row"><span class="hist-time">2025-12-20 11:30</span><span class="hist-action">Aprobó proveedor tras validación de cumplimiento</span><span class="hist-user">M. C. Ortiz</span></div>
-          <div class="hist-row"><span class="hist-time">2025-12-18 16:45</span><span class="hist-action">Cargó certificado ISO 9001</span><span class="hist-user">M. C. Ortiz</span></div>
-        </div>
+        <div class="history-log" id="provHistoryLog"></div>
       </div>
     </div>
+
+    <script>
+      let proveedores = [
+        { codigo:'PROV-014', razonSocial:'Midea Electric', pais:'China', fabricante:'Sí', riesgo:'Bajo', habilitadoPO:'Sí', estado:'Aprobado',
+          incoterm:'FOB', anticipo:'30%', tiempoProd:'45 días', vigenciaPrecios:'90 días', categorias:'Refrigeración, Lavado', moq:'500 unidades',
+          historial:[
+            {fecha:'2025-12-20 11:30', accion:'Aprobó proveedor tras validación de cumplimiento', usuario:'M. C. Ortiz'},
+            {fecha:'2025-12-18 16:45', accion:'Cargó certificado ISO 9001', usuario:'M. C. Ortiz'},
+          ]},
+        { codigo:'PROV-021', razonSocial:'Whirlpool', pais:'México', fabricante:'Sí', riesgo:'Bajo', habilitadoPO:'Sí', estado:'Aprobado',
+          incoterm:'CIF', anticipo:'20%', tiempoProd:'30 días', vigenciaPrecios:'60 días', categorias:'Lavado', moq:'300 unidades',
+          historial:[{fecha:'2025-11-02 10:00', accion:'Aprobó proveedor', usuario:'M. C. Ortiz'}] },
+        { codigo:'PROV-033', razonSocial:'Samsung LatAm', pais:'Corea del Sur', fabricante:'No', riesgo:'Medio', habilitadoPO:'No', estado:'En validación',
+          incoterm:'FOB', anticipo:'', tiempoProd:'', vigenciaPrecios:'', categorias:'Electrónica', moq:'',
+          historial:[{fecha:'2026-01-15 09:20', accion:'Inició proceso de vinculación', usuario:'M. C. Ortiz'}] },
+      ];
+      let provEditingCodigo = null;
+
+      function badgeClassRiesgo(r){ return r === 'Bajo' ? 'ok' : (r === 'Medio' ? 'warn' : 'danger'); }
+      function badgeClassSiNo(v){ return v === 'Sí' ? 'ok' : (v === 'No' ? 'danger' : 'gray'); }
+      function badgeClassEstadoProv(e){ return e === 'Aprobado' ? 'ok' : (e === 'En validación' ? 'warn' : 'danger'); }
+
+      function renderProveedores(){
+        const term = (document.getElementById('provSearch').value || '').toLowerCase();
+        const tbody = document.getElementById('provTableBody');
+        const filtered = proveedores.filter(p =>
+          p.razonSocial.toLowerCase().includes(term) || p.pais.toLowerCase().includes(term) || p.codigo.toLowerCase().includes(term)
+        );
+        tbody.innerHTML = filtered.map(p => `
+          <tr>
+            <td>${p.codigo}</td><td>${p.razonSocial}</td><td>${p.pais}</td>
+            <td><span class="badge ${badgeClassSiNo(p.fabricante)}">${p.fabricante}</span></td>
+            <td><span class="badge ${badgeClassRiesgo(p.riesgo)}">${p.riesgo}</span></td>
+            <td><span class="badge ${badgeClassSiNo(p.habilitadoPO)}">${p.habilitadoPO}</span></td>
+            <td><span class="badge ${badgeClassEstadoProv(p.estado)}">${p.estado}</span></td>
+            <td><span class="icon-btn icon-view" onclick="viewProveedor('${p.codigo}')">⊕</span></td>
+          </tr>
+        `).join('') || '<tr><td colspan="8" style="text-align:center; color:var(--text-faint)">Sin resultados</td></tr>';
+      }
+
+      function openProveedorForm(){
+        provEditingCodigo = null;
+        document.getElementById('provFormTitle').textContent = 'Vincular proveedor';
+        ['provRazonSocial','provPais','provAnticipo','provTiempoProd','provVigenciaPrecios','provCategorias','provMoq'].forEach(id => document.getElementById(id).value = '');
+        document.getElementById('provFabricante').value = 'Sí';
+        document.getElementById('provRiesgo').value = 'Bajo';
+        document.getElementById('provHabilitadoPO').value = 'No';
+        document.getElementById('provEstado').value = 'En validación';
+        document.getElementById('provIncoterm').value = 'FOB';
+        document.getElementById('provFormError').style.display = 'none';
+        document.getElementById('provFormSection').style.display = 'block';
+        document.getElementById('provHistoryBox').style.display = 'none';
+        document.getElementById('provRazonSocial').focus();
+      }
+
+      function closeProveedorForm(){ document.getElementById('provFormSection').style.display = 'none'; }
+
+      function saveProveedor(){
+        const razonSocial = document.getElementById('provRazonSocial').value.trim();
+        const pais = document.getElementById('provPais').value.trim();
+        if (!razonSocial || !pais){
+          document.getElementById('provFormError').style.display = 'block';
+          return;
+        }
+        const data = {
+          razonSocial, pais,
+          fabricante: document.getElementById('provFabricante').value,
+          riesgo: document.getElementById('provRiesgo').value,
+          habilitadoPO: document.getElementById('provHabilitadoPO').value,
+          estado: document.getElementById('provEstado').value,
+          incoterm: document.getElementById('provIncoterm').value,
+          anticipo: document.getElementById('provAnticipo').value.trim(),
+          tiempoProd: document.getElementById('provTiempoProd').value.trim(),
+          vigenciaPrecios: document.getElementById('provVigenciaPrecios').value.trim(),
+          categorias: document.getElementById('provCategorias').value.trim(),
+          moq: document.getElementById('provMoq').value.trim(),
+        };
+        const now = new Date().toISOString().slice(0,16).replace('T',' ');
+
+        if (provEditingCodigo){
+          const idx = proveedores.findIndex(p => p.codigo === provEditingCodigo);
+          proveedores[idx] = { ...proveedores[idx], ...data };
+          proveedores[idx].historial.unshift({fecha: now, accion:'Editó los datos del proveedor', usuario:'María Camila Ortiz'});
+        } else {
+          const nextNum = 1 + Math.max(0, ...proveedores.map(p => parseInt(p.codigo.split('-')[1], 10)));
+          const codigo = 'PROV-' + String(nextNum).padStart(3,'0');
+          proveedores.push({ codigo, ...data, historial:[{fecha: now, accion:'Inició proceso de vinculación', usuario:'María Camila Ortiz'}] });
+        }
+        renderProveedores();
+        closeProveedorForm();
+      }
+
+      function viewProveedor(codigo){
+        const p = proveedores.find(x => x.codigo === codigo);
+        if (!p) return;
+        provEditingCodigo = p.codigo;
+        document.getElementById('provFormTitle').textContent = 'Editar — ' + p.razonSocial;
+        document.getElementById('provRazonSocial').value = p.razonSocial;
+        document.getElementById('provPais').value = p.pais;
+        document.getElementById('provFabricante').value = p.fabricante;
+        document.getElementById('provRiesgo').value = p.riesgo;
+        document.getElementById('provHabilitadoPO').value = p.habilitadoPO;
+        document.getElementById('provEstado').value = p.estado;
+        document.getElementById('provIncoterm').value = p.incoterm;
+        document.getElementById('provAnticipo').value = p.anticipo;
+        document.getElementById('provTiempoProd').value = p.tiempoProd;
+        document.getElementById('provVigenciaPrecios').value = p.vigenciaPrecios;
+        document.getElementById('provCategorias').value = p.categorias;
+        document.getElementById('provMoq').value = p.moq;
+        document.getElementById('provFormError').style.display = 'none';
+        document.getElementById('provFormSection').style.display = 'block';
+        document.getElementById('provHistoryBox').style.display = 'block';
+        document.getElementById('provHistoryLog').innerHTML = p.historial.map(h => `
+          <div class="hist-row"><span class="hist-time">${h.fecha}</span><span class="hist-action">${h.accion}</span><span class="hist-user">${h.usuario}</span></div>
+        `).join('');
+      }
+
+      renderProveedores();
+    </script>
 
     <!-- ============ PRODUCTOS ============ -->
     <div class="panel" id="panel-productos">
@@ -918,7 +1097,7 @@
           <div class="step"><div class="dot">6</div><div class="lbl">Retirado</div></div>
         </div>
         <div class="field-row">
-          <div class="field"><label>Agencia de aduanas</label><select><option>Aduanimex S.A. Nivel 1</option></select></div>
+          <div class="field"><label>Agencia de aduanas</label><select id="aduanaSelect" onchange="renderCorreoAgenciaPreview()"></select></div>
           <div class="field"><label>Estado de levante</label><input value="Automático"></div>
           <div class="field"><label>Fecha asignación</label><input type="date" value="2026-01-02"></div>
         </div>
@@ -926,8 +1105,49 @@
           <div class="doc-row"><div class="doc-check on">✓</div><div><div class="doc-name">Commercial Invoice</div></div><span class="badge ok">Cargado</span><span class="doc-action">Ver</span></div>
           <div class="doc-row"><div class="doc-check"></div><div><div class="doc-name">Poder aduanero</div></div><span class="badge warn">Pendiente</span><span class="doc-action">Cargar</span></div>
         </div>
-        <div class="btn-row"><button class="btn btn-primary">Generar correo a la agencia</button></div>
+        <div class="btn-row"><button class="btn btn-primary" onclick="toggleCorreoAgenciaPreview()">Generar correo a la agencia</button></div>
+        <div class="email-preview" id="correoAgenciaPreview" style="display:none; margin-top:12px"></div>
       </div>
+
+      <script>
+        function populateAduanaSelect(){
+          const sel = document.getElementById('aduanaSelect');
+          sel.innerHTML = agenciasAduana.map(a => `<option value="${a.codigo}">${a.razonSocial}</option>`).join('');
+          sel.value = 'ADU-001';
+        }
+
+        function toggleCorreoAgenciaPreview(){
+          const box = document.getElementById('correoAgenciaPreview');
+          if (box.style.display === 'block'){
+            box.style.display = 'none';
+          } else {
+            renderCorreoAgenciaPreview();
+          }
+        }
+
+        function renderCorreoAgenciaPreview(){
+          const codigo = document.getElementById('aduanaSelect').value;
+          const a = agenciasAduana.find(x => x.codigo === codigo);
+          const box = document.getElementById('correoAgenciaPreview');
+          box.style.display = 'block';
+          if (!a || !a.contactos || !a.contactos.length){
+            box.innerHTML = `<div class="alert-list"><div class="alert-row on"><span class="ai">⚠</span> ${a ? a.razonSocial : 'Esta agencia'} no tiene contactos registrados en la Matriz de Agencias de Aduana — agrégalos ahí antes de poder enviar el correo.</div></div>`;
+            return;
+          }
+          const destinatarios = a.contactos.map(c => `${c.nombre} (${c.cargo}) — ${c.correo}`).join('<br>');
+          box.innerHTML = `
+            <div class="subj">Asunto: Radicación documental DO M0301479MDE-BUN — ${a.razonSocial}</div>
+            <b>Para:</b><br>${destinatarios}<br><br>
+            Adjunto la documentación para radicar la importación DO M0301479MDE-BUN, mercancía refrigeradores,
+            subpartida 8418.21.10.00. Documentos adjuntos: Commercial Invoice. Pendiente: poder aduanero.<br><br>
+            Quedamos atentos a la confirmación de recepción y al número de radicado DIAN.<br><br>
+            Cordialmente,<br>Comercio Exterior — JLC Electronics
+          `;
+        }
+
+        populateAduanaSelect();
+      </script>
+
       <div class="section" style="background:var(--red-soft); border-color:var(--red)">
         <div class="toolbar" style="margin-bottom:0">
           <div>
@@ -1095,15 +1315,177 @@
 
     <!-- ============ MATRIZ AGENCIAS ADUANA ============ -->
     <div class="panel" id="panel-mataduanas">
-      <div class="toolbar"><input class="search-input" placeholder="Buscar agencia..."><button class="btn btn-primary">+ Nueva agencia</button></div>
+      <div class="toolbar">
+        <input class="search-input" id="aduSearch" placeholder="Buscar agencia..." oninput="renderAgenciasAduana()">
+        <button class="btn btn-primary" onclick="openAgenciaForm()">+ Nueva agencia</button>
+      </div>
       <div class="table-card"><table>
-        <thead><tr><th>Código</th><th>Razón social</th><th>Ciudad</th><th>SLA radicación</th><th>Nivel servicio</th><th>Estado</th></tr></thead>
-        <tbody>
-          <tr><td>ADU-001</td><td>Aduanimex S.A. Nivel 1</td><td>Buenaventura</td><td class="num">2 días</td><td><span class="badge ok">Alto</span></td><td><span class="badge ok">Activa</span></td></tr>
-          <tr><td>ADU-002</td><td>Aduanas del Pacífico Ltda.</td><td>Cartagena</td><td class="num">3 días</td><td><span class="badge warn">Medio</span></td><td><span class="badge ok">Activa</span></td></tr>
-        </tbody>
+        <thead><tr><th>Código</th><th>Razón social</th><th>NIT</th><th>Ciudad</th><th>SLA radicación</th><th>Nivel servicio</th><th>Contactos</th><th>Estado</th><th>Acciones</th></tr></thead>
+        <tbody id="aduTableBody"></tbody>
       </table></div>
+
+      <div class="section" id="aduFormSection" style="display:none">
+        <div class="section-title" id="aduFormTitle">Nueva agencia de aduanas</div>
+        <div class="alert-list" id="aduFormError" style="display:none">
+          <div class="alert-row on"><span class="ai">⚠</span> Razón social y ciudad son obligatorias.</div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>Razón social *</label><input id="aduRazonSocial"></div>
+          <div class="field"><label>NIT — registro de la aduana</label><input id="aduNit" placeholder="900.000.000-0"></div>
+          <div class="field"><label>Ciudad *</label><input id="aduCiudad"></div>
+          <div class="field"><label>SLA de radicación</label><input id="aduSla" placeholder="2 días"></div>
+          <div class="field"><label>Nivel de servicio</label><select id="aduNivelServicio"><option>Sin evaluar</option><option>Alto</option><option>Medio</option><option>Bajo</option></select></div>
+          <div class="field"><label>Estado</label><select id="aduEstado"><option>Activa</option><option>En revisión</option><option>Inactiva</option></select></div>
+        </div>
+
+        <div class="section-title" style="font-size:12.5px">Contactos <span style="font-weight:400; color:var(--text-faint)">— a estos correos se envía cuando se asigne una operación</span></div>
+        <div class="doc-list" id="aduContactosList"></div>
+        <div class="field-row" style="margin-top:10px">
+          <div class="field"><label>Nombre</label><input id="aduContactoNombre"></div>
+          <div class="field"><label>Cargo</label><input id="aduContactoCargo" placeholder="Comercio Exterior"></div>
+          <div class="field"><label>Teléfono</label><input id="aduContactoTelefono"></div>
+          <div class="field"><label>Correo</label><input id="aduContactoCorreo" placeholder="nombre@agencia.com"></div>
+        </div>
+        <div class="btn-row" style="justify-content:flex-start; margin-top:-4px">
+          <button class="btn btn-ghost" onclick="addAduContacto()">+ Agregar contacto</button>
+        </div>
+
+        <div class="btn-row" style="margin-top:16px">
+          <button class="btn btn-ghost" onclick="closeAgenciaForm()">Cancelar</button>
+          <button class="btn btn-primary" onclick="saveAgencia()">Guardar</button>
+        </div>
+      </div>
     </div>
+
+    <script>
+      let aduEditingCodigo = null;
+      let aduContactosTemp = [];
+
+      function badgeClassNivelServicio(n){
+        if (n === 'Alto') return 'ok';
+        if (n === 'Medio') return 'warn';
+        if (n === 'Bajo') return 'danger';
+        return 'gray';
+      }
+      function badgeClassEstadoAgencia(e){ return e === 'Activa' ? 'ok' : (e === 'En revisión' ? 'warn' : 'danger'); }
+
+      function renderAgenciasAduana(){
+        const term = (document.getElementById('aduSearch').value || '').toLowerCase();
+        const tbody = document.getElementById('aduTableBody');
+        const filtered = agenciasAduana.filter(a =>
+          a.razonSocial.toLowerCase().includes(term) || a.ciudad.toLowerCase().includes(term)
+        );
+        tbody.innerHTML = filtered.map(a => `
+          <tr>
+            <td>${a.codigo}</td><td>${a.razonSocial}</td><td>${a.nit || '—'}</td><td>${a.ciudad}</td>
+            <td class="num">${a.sla}</td>
+            <td><span class="badge ${badgeClassNivelServicio(a.nivelServicio)}">${a.nivelServicio}</span></td>
+            <td>${(a.contactos && a.contactos.length) ? a.contactos.length + ' contacto' + (a.contactos.length > 1 ? 's' : '') : '<span class="badge warn">Sin contactos</span>'}</td>
+            <td><span class="badge ${badgeClassEstadoAgencia(a.estado)}">${a.estado}</span></td>
+            <td><span class="icon-btn icon-edit" onclick="editAgencia('${a.codigo}')">✎</span></td>
+          </tr>
+        `).join('') || '<tr><td colspan="9" style="text-align:center; color:var(--text-faint)">Sin resultados</td></tr>';
+      }
+
+      function renderAduContactosList(){
+        const list = document.getElementById('aduContactosList');
+        if (!aduContactosTemp.length){
+          list.innerHTML = '<div class="section-desc" style="margin:0">Sin contactos agregados todavía.</div>';
+          return;
+        }
+        list.innerHTML = aduContactosTemp.map((c, idx) => `
+          <div class="doc-row">
+            <div class="doc-check on">✓</div>
+            <div><div class="doc-name">${c.nombre} — ${c.cargo}</div><div class="doc-req">${c.correo} · ${c.telefono || 'sin teléfono'}</div></div>
+            <span class="badge blue">Correo</span>
+            <span class="doc-action" style="color:var(--red)" onclick="removeAduContacto(${idx})">Quitar</span>
+          </div>
+        `).join('');
+      }
+
+      function addAduContacto(){
+        const nombre = document.getElementById('aduContactoNombre').value.trim();
+        const cargo = document.getElementById('aduContactoCargo').value.trim();
+        const telefono = document.getElementById('aduContactoTelefono').value.trim();
+        const correo = document.getElementById('aduContactoCorreo').value.trim();
+        if (!nombre || !correo) return;
+        aduContactosTemp.push({ nombre, cargo, telefono, correo });
+        document.getElementById('aduContactoNombre').value = '';
+        document.getElementById('aduContactoCargo').value = '';
+        document.getElementById('aduContactoTelefono').value = '';
+        document.getElementById('aduContactoCorreo').value = '';
+        renderAduContactosList();
+      }
+
+      function removeAduContacto(idx){
+        aduContactosTemp.splice(idx, 1);
+        renderAduContactosList();
+      }
+
+      function openAgenciaForm(){
+        aduEditingCodigo = null;
+        aduContactosTemp = [];
+        document.getElementById('aduFormTitle').textContent = 'Nueva agencia de aduanas';
+        document.getElementById('aduRazonSocial').value = '';
+        document.getElementById('aduNit').value = '';
+        document.getElementById('aduCiudad').value = '';
+        document.getElementById('aduSla').value = '';
+        document.getElementById('aduNivelServicio').value = 'Sin evaluar';
+        document.getElementById('aduEstado').value = 'Activa';
+        document.getElementById('aduFormError').style.display = 'none';
+        renderAduContactosList();
+        document.getElementById('aduFormSection').style.display = 'block';
+        document.getElementById('aduRazonSocial').focus();
+      }
+
+      function closeAgenciaForm(){ document.getElementById('aduFormSection').style.display = 'none'; }
+
+      function saveAgencia(){
+        const razonSocial = document.getElementById('aduRazonSocial').value.trim();
+        const ciudad = document.getElementById('aduCiudad').value.trim();
+        if (!razonSocial || !ciudad){
+          document.getElementById('aduFormError').style.display = 'block';
+          return;
+        }
+        const data = {
+          razonSocial, ciudad,
+          nit: document.getElementById('aduNit').value.trim(),
+          sla: document.getElementById('aduSla').value.trim() || '—',
+          nivelServicio: document.getElementById('aduNivelServicio').value,
+          estado: document.getElementById('aduEstado').value,
+          contactos: [...aduContactosTemp],
+        };
+        if (aduEditingCodigo){
+          const idx = agenciasAduana.findIndex(a => a.codigo === aduEditingCodigo);
+          agenciasAduana[idx] = { ...agenciasAduana[idx], ...data };
+        } else {
+          const nextNum = 1 + Math.max(0, ...agenciasAduana.map(a => parseInt(a.codigo.split('-')[1], 10)));
+          const codigo = 'ADU-' + String(nextNum).padStart(3,'0');
+          agenciasAduana.push({ codigo, ...data });
+        }
+        renderAgenciasAduana();
+        closeAgenciaForm();
+      }
+
+      function editAgencia(codigo){
+        const a = agenciasAduana.find(x => x.codigo === codigo);
+        if (!a) return;
+        aduEditingCodigo = a.codigo;
+        aduContactosTemp = (a.contactos || []).map(c => ({...c}));
+        document.getElementById('aduFormTitle').textContent = 'Editar — ' + a.razonSocial;
+        document.getElementById('aduRazonSocial').value = a.razonSocial;
+        document.getElementById('aduNit').value = a.nit || '';
+        document.getElementById('aduCiudad').value = a.ciudad;
+        document.getElementById('aduSla').value = a.sla === '—' ? '' : a.sla;
+        document.getElementById('aduNivelServicio').value = a.nivelServicio;
+        document.getElementById('aduEstado').value = a.estado;
+        document.getElementById('aduFormError').style.display = 'none';
+        renderAduContactosList();
+        document.getElementById('aduFormSection').style.display = 'block';
+      }
+
+      renderAgenciasAduana();
+    </script>
 
     <!-- ============ MATRIZ TRANSPORTADORAS ============ -->
     <div class="panel" id="panel-mattransp">
