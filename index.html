@@ -1,0 +1,1125 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JLC Electronics · Módulo de Importaciones</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@500&display=swap');
+  *{ box-sizing:border-box; margin:0; padding:0; font-family:'Inter',sans-serif; }
+
+  :root{
+    --navy:#10274a; --blue:#176fd1; --blue-soft:#e8f1fc;
+    --green:#0b8562; --green-soft:#e5f5f0; --amber:#c67612; --amber-soft:#fbf1e2;
+    --red:#d04450; --red-soft:#fceaec; --bg:#f4f7fb; --card:#ffffff;
+    --line:#e1e7f0; --text:#0e131c; --text-dim:#5b6576; --text-faint:#94a0b3;
+    --row-hover:#fafbfd; --input-bg:#fbfcfe; --disabled-bg:#eef2f6;
+  }
+  [data-theme="dark"]{
+    --navy:#0c1a30; --blue:#4a9bef; --blue-soft:#132743;
+    --green:#25b98a; --green-soft:#0f2c24; --amber:#e0a03e; --amber-soft:#332209;
+    --red:#f0707c; --red-soft:#3a1418; --bg:#0d1119; --card:#161b26;
+    --line:#2a323f; --text:#e7eaee; --text-dim:#9aa4b2; --text-faint:#5b6576;
+    --row-hover:#1b212c; --input-bg:#10141d; --disabled-bg:#1f2530;
+  }
+  body{ background:var(--bg); color:var(--text); display:flex; min-height:100vh; transition:background .15s,color .15s; }
+
+  .sidebar{ width:236px; flex-shrink:0; background:var(--navy); min-height:100vh; padding:18px 0; overflow-y:auto; position:sticky; top:0; height:100vh; transition:transform .2s; z-index:20; }
+  .sidebar .brand{ padding:0 20px 16px; border-bottom:1px solid rgba(255,255,255,0.1); margin-bottom:10px; display:flex; justify-content:space-between; align-items:flex-start; }
+  .sidebar .brand .name{ color:#fff; font-weight:800; font-size:15px; }
+  .sidebar .brand .sub{ color:#a9c1e0; font-size:10px; margin-top:3px; }
+  .close-sidebar{ display:none; color:#a9c1e0; font-size:18px; cursor:pointer; background:none; border:none; }
+  .nav-group-title{ color:#6f8bb3; font-size:9.5px; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; padding:13px 20px 5px; }
+  .nav-item{ display:flex; align-items:center; gap:9px; padding:8.5px 20px; color:#c8d7ec; font-size:12.5px; font-weight:600; cursor:pointer; border-left:3px solid transparent; }
+  .nav-item:hover{ background:rgba(255,255,255,0.05); }
+  .nav-item.active{ background:rgba(255,255,255,0.08); color:#fff; border-left-color:var(--blue); }
+  .nav-dot{ width:5px; height:5px; border-radius:50%; background:currentColor; opacity:0.6; flex-shrink:0; }
+
+  .main{ flex:1; min-width:0; }
+  .topbar{ background:var(--card); border-bottom:1px solid var(--line); padding:13px 24px; display:flex; justify-content:space-between; align-items:center; gap:14px; position:sticky; top:0; z-index:15; flex-wrap:wrap; }
+  .topbar-left{ display:flex; align-items:center; gap:14px; min-width:0; }
+  .menu-toggle{ display:none; background:none; border:none; font-size:20px; color:var(--navy); cursor:pointer; }
+  .topbar .title{ font-size:16px; font-weight:800; color:var(--navy); white-space:nowrap; }
+  .topbar .sub{ font-size:11px; color:var(--text-dim); margin-top:2px; }
+  .global-search{ position:relative; flex:1; max-width:340px; min-width:160px; }
+  .global-search input{ width:100%; border:1px solid var(--line); border-radius:20px; padding:8px 14px 8px 30px; font-size:12px; background:var(--input-bg); color:var(--text); }
+  .global-search .gs-icon{ position:absolute; left:11px; top:50%; transform:translateY(-50%); font-size:12px; color:var(--text-faint); }
+  .topbar-right{ display:flex; align-items:center; gap:10px; }
+  .theme-toggle{ background:var(--bg); border:1px solid var(--line); border-radius:20px; padding:6px 12px; font-size:11.5px; font-weight:600; color:var(--navy); cursor:pointer; }
+  .user-chip{ background:var(--bg); padding:7px 14px; border-radius:20px; font-size:12px; font-weight:600; color:var(--navy); white-space:nowrap; }
+
+  .wrap{ max-width:1380px; padding:20px 24px 60px; }
+  .panel{ display:none; } .panel.active{ display:block; }
+
+  .toolbar{ display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:10px; }
+  .search-input{ border:1px solid var(--line); border-radius:7px; padding:9px 13px; font-size:12.5px; width:230px; background:var(--input-bg); color:var(--text); }
+  .btn{ font-size:12.5px; font-weight:700; padding:9px 16px; border-radius:8px; border:none; cursor:pointer; }
+  .btn-primary{ background:var(--blue); color:#fff; }
+  .btn-ghost{ background:var(--card); color:var(--navy); border:1.5px solid var(--line); }
+  .btn-navy{ background:var(--navy); color:#fff; }
+  .btn-disabled{ background:var(--disabled-bg); color:var(--text-faint); cursor:not-allowed; }
+  .btn-export{ background:var(--card); color:var(--green); border:1.5px solid var(--green-soft); font-size:11.5px; padding:7px 13px; }
+  .btn-row{ display:flex; gap:10px; justify-content:flex-end; margin-top:6px; flex-wrap:wrap; }
+
+  .trace-bar{ background:var(--card); border:1px solid var(--line); border-radius:10px; padding:12px 16px; margin-bottom:14px; display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+  .trace-lbl{ font-size:10px; font-weight:700; color:var(--text-faint); text-transform:uppercase; letter-spacing:0.04em; margin-right:4px; }
+  .trace-pill{ font-size:11.5px; font-weight:600; padding:5px 11px; border-radius:20px; background:var(--blue-soft); color:var(--blue); cursor:pointer; white-space:nowrap; }
+  .trace-pill.current{ background:var(--navy); color:#fff; }
+  .trace-arrow{ color:var(--text-faint); font-size:11px; }
+
+  .history-box{ background:var(--card); border:1px solid var(--line); border-radius:10px; padding:16px 18px; margin-top:16px; }
+  .history-head{ display:flex; justify-content:space-between; align-items:center; cursor:pointer; }
+  .history-title{ font-size:13px; font-weight:700; color:var(--navy); }
+  .history-toggle{ font-size:11.5px; color:var(--blue); font-weight:600; }
+  .history-log{ margin-top:12px; display:none; }
+  .history-log.open{ display:block; }
+  .hist-row{ display:grid; grid-template-columns:130px 1fr 140px; gap:12px; padding:8px 0; border-bottom:1px solid var(--line); font-size:11.8px; }
+  .hist-row:last-child{ border-bottom:none; }
+  .hist-time{ font-family:'IBM Plex Mono',monospace; color:var(--text-dim); font-size:11px; }
+  .hist-action{ color:var(--text); }
+  .hist-user{ color:var(--text-dim); text-align:right; }
+
+  .table-card{ background:var(--card); border:1px solid var(--line); border-radius:10px; overflow:auto; margin-bottom:16px; max-height:480px; }
+  table{ border-collapse:collapse; width:100%; min-width:820px; font-size:11.8px; }
+  thead th{ text-align:left; font-size:10.2px; font-weight:700; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.02em; padding:10px 12px; border-bottom:2px solid var(--line); background:var(--card); white-space:nowrap; position:sticky; top:0; z-index:2; }
+  tbody td{ padding:9px 12px; border-bottom:1px solid var(--line); white-space:nowrap; background:var(--card); }
+  tbody tr:hover td{ background:var(--row-hover); }
+  tbody tr:last-child td{ border-bottom:none; }
+  thead th:first-child, tbody td:first-child{ position:sticky; left:0; z-index:1; box-shadow:1px 0 0 var(--line); }
+  thead th:first-child{ z-index:3; }
+  .num{ font-family:'IBM Plex Mono',monospace; text-align:right; }
+
+  .badge{ font-size:10.3px; font-weight:700; padding:4px 9px; border-radius:20px; display:inline-block; white-space:nowrap; }
+  .badge.ok{ background:var(--green-soft); color:var(--green); } .badge.warn{ background:var(--amber-soft); color:var(--amber); }
+  .badge.danger{ background:var(--red-soft); color:var(--red); } .badge.blue{ background:var(--blue-soft); color:var(--blue); }
+  .badge.gray{ background:var(--disabled-bg); color:var(--text-dim); }
+
+  .icon-btn{ width:24px; height:24px; border-radius:6px; display:inline-flex; align-items:center; justify-content:center; font-size:11px; color:#fff; cursor:pointer; margin-right:4px; }
+  .icon-view{ background:var(--blue); } .icon-edit{ background:var(--green); } .icon-del{ background:var(--red); } .icon-print{ background:#4b5563; }
+
+  .section{ background:var(--card); border:1px solid var(--line); border-radius:10px; padding:20px; margin-bottom:16px; }
+  .section-title{ font-size:13.5px; font-weight:700; color:var(--navy); margin-bottom:4px; }
+  .section-desc{ font-size:11.8px; color:var(--text-dim); margin-bottom:14px; }
+  .field-row{ display:grid; grid-template-columns:repeat(3,1fr); gap:13px; margin-bottom:13px; }
+  @media (max-width:820px){ .field-row{ grid-template-columns:1fr 1fr; } }
+  .field label{ display:block; font-size:11px; font-weight:600; color:var(--text-dim); margin-bottom:5px; }
+  .field select, .field input{ width:100%; border:1px solid var(--line); border-radius:7px; padding:8.5px 11px; font-size:12.5px; background:var(--input-bg); color:var(--text); font-family:'Inter',sans-serif; }
+
+  .upload-zone{ border:1.5px dashed #b9c8dd; border-radius:9px; padding:22px 20px; text-align:center; color:var(--text-dim); font-size:12.2px; background:var(--input-bg); margin-bottom:14px; }
+  .upload-zone b{ color:var(--blue); }
+
+  .doc-list{ display:flex; flex-direction:column; gap:7px; }
+  .doc-row{ display:grid; grid-template-columns:auto 1fr auto auto; align-items:center; gap:12px; padding:10px 13px; border:1px solid var(--line); border-radius:8px; background:var(--input-bg); }
+  @media (max-width:640px){ .doc-row{ grid-template-columns:1fr; row-gap:6px; } }
+  .doc-check{ width:19px; height:19px; border-radius:5px; border:2px solid var(--line); display:flex; align-items:center; justify-content:center; font-size:11px; color:#fff; }
+  .doc-check.on{ background:var(--green); border-color:var(--green); }
+  .doc-name{ font-size:12.5px; font-weight:600; } .doc-req{ font-size:10.2px; color:var(--text-faint); margin-top:2px; }
+  .doc-action{ font-size:11.5px; font-weight:700; color:var(--blue); cursor:pointer; }
+
+  .stepper{ display:flex; gap:0; margin:16px 0 20px; overflow-x:auto; }
+  .step{ flex:1; min-width:104px; text-align:center; position:relative; padding-bottom:8px; }
+  .step .dot{ width:24px; height:24px; border-radius:50%; background:var(--card); border:2.5px solid var(--line); margin:0 auto 6px; display:flex; align-items:center; justify-content:center; font-size:10.5px; font-weight:700; color:var(--text-faint); }
+  .step .lbl{ font-size:10px; font-weight:600; color:var(--text-faint); line-height:1.25; padding:0 3px; }
+  .step .bar{ position:absolute; top:12px; left:-50%; width:100%; height:2.5px; background:var(--line); z-index:-1; }
+  .step:first-child .bar{ display:none; }
+  .step.done .dot{ background:var(--green); border-color:var(--green); color:#fff; } .step.done .lbl{ color:var(--green); } .step.done .bar{ background:var(--green); }
+  .step.current .dot{ background:var(--blue); border-color:var(--blue); color:#fff; } .step.current .lbl{ color:var(--blue); font-weight:700; }
+
+  .timeline{ display:flex; flex-direction:column; }
+  .tl-row{ display:grid; grid-template-columns:200px 1fr auto; gap:14px; align-items:center; padding:9px 0; border-bottom:1px solid var(--line); }
+  .tl-row:last-child{ border-bottom:none; }
+  .tl-label{ font-size:12px; font-weight:600; }
+  .tl-input{ border:1px solid var(--line); border-radius:6px; padding:6.5px 10px; font-size:12px; width:150px; background:var(--input-bg); color:var(--text); }
+  .tl-days{ font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--text-dim); white-space:nowrap; }
+  .tl-days.warn{ color:var(--amber); font-weight:700; }
+
+  .indicator-grid{ display:grid; grid-template-columns:repeat(5,1fr); gap:10px; margin-top:14px; }
+  @media (max-width:760px){ .indicator-grid{ grid-template-columns:repeat(2,1fr); } }
+  .indicator{ background:var(--input-bg); border:1px solid var(--line); border-radius:8px; padding:11px; text-align:center; }
+  .indicator .num2{ font-family:'IBM Plex Mono',monospace; font-size:18px; font-weight:700; }
+  .indicator .num2.ok{ color:var(--green); } .indicator .num2.warn{ color:var(--amber); }
+  .indicator .lbl{ font-size:9.5px; color:var(--text-faint); margin-top:3px; text-transform:uppercase; }
+
+  .kpi-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:16px; }
+  @media (max-width:820px){ .kpi-grid{ grid-template-columns:repeat(2,1fr); } }
+  .kpi{ background:var(--card); border:1px solid var(--line); border-radius:9px; padding:13px; }
+  .kpi .lbl{ font-size:10px; color:var(--text-faint); font-weight:600; text-transform:uppercase; }
+  .kpi .val{ font-family:'IBM Plex Mono',monospace; font-size:20px; font-weight:700; margin-top:5px; }
+  .kpi .val.warn{ color:var(--amber); } .kpi .val.danger{ color:var(--red); } .kpi .val.ok{ color:var(--green); }
+
+  .subtabs{ display:flex; gap:4px; border-bottom:2px solid var(--line); margin-bottom:16px; overflow-x:auto; }
+  .subtab{ padding:9px 15px; font-size:12.5px; font-weight:600; color:var(--text-dim); cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-2px; white-space:nowrap; }
+  .subtab.active{ color:var(--blue); border-bottom-color:var(--blue); }
+  .subpanel{ display:none; } .subpanel.active{ display:block; }
+
+  .progress-bar{ width:76px; height:7px; background:var(--line); border-radius:20px; overflow:hidden; display:inline-block; vertical-align:middle; margin-right:6px; }
+  .progress-fill{ height:100%; background:var(--green); } .progress-fill.warn{ background:var(--amber); }
+
+  .funnel-row{ display:grid; grid-template-columns:210px 1fr 85px; gap:14px; align-items:center; padding:11px 0; border-bottom:1px solid var(--line); }
+  .funnel-row:last-child{ border-bottom:none; }
+  .funnel-track{ height:9px; background:var(--line); border-radius:6px; overflow:hidden; }
+  .funnel-fill{ height:100%; background:var(--blue); border-radius:6px; }
+  .funnel-days{ font-family:'IBM Plex Mono',monospace; font-size:11.5px; text-align:right; font-weight:700; }
+
+  .prorrateo-toggle{ display:flex; gap:8px; margin-bottom:14px; }
+  .prorrateo-opt{ font-size:11.5px; font-weight:600; padding:7px 14px; border-radius:20px; border:1.5px solid var(--line); color:var(--text-dim); cursor:pointer; }
+  .prorrateo-opt.active{ background:var(--navy); color:#fff; border-color:var(--navy); }
+
+  .compare-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:13px; margin-top:14px; }
+  @media (max-width:760px){ .compare-grid{ grid-template-columns:1fr; } }
+  .compare-card{ border:1px solid var(--line); border-radius:8px; padding:13px; text-align:center; }
+  .compare-card .lbl{ font-size:10px; color:var(--text-faint); text-transform:uppercase; }
+  .compare-card .val{ font-family:'IBM Plex Mono',monospace; font-size:18px; font-weight:700; margin-top:5px; }
+  .compare-card .val.diff-warn{ color:var(--amber); }
+
+  .close-box{ background:var(--blue-soft); border:1px solid var(--line); border-radius:10px; padding:16px 18px; }
+  .close-box .title{ font-size:13.5px; font-weight:700; color:var(--navy); margin-bottom:8px; }
+  .close-checklist{ font-size:12px; color:var(--text-dim); line-height:1.85; margin-bottom:12px; list-style:none; }
+  .close-checklist .ok{ color:var(--green); font-weight:700; margin-right:5px; }
+  .close-checklist .pending{ color:var(--amber); font-weight:700; margin-right:5px; }
+
+  .role-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:11px; margin-bottom:18px; }
+  @media (max-width:900px){ .role-grid{ grid-template-columns:repeat(2,1fr); } }
+  @media (max-width:600px){ .role-grid{ grid-template-columns:1fr; } }
+  .role-card{ background:var(--card); border:1px solid var(--line); border-radius:9px; padding:13px; }
+  .role-card.admin{ border-color:var(--navy); background:var(--blue-soft); }
+  .role-head{ display:flex; justify-content:space-between; align-items:center; margin-bottom:7px; }
+  .role-name{ font-weight:700; font-size:13px; }
+  .role-users{ font-size:11px; color:var(--text-dim); margin-top:7px; }
+  .perm-tags{ display:flex; flex-wrap:wrap; gap:5px; }
+  .perm-tag{ font-size:9.8px; font-weight:600; padding:3px 8px; border-radius:20px; background:var(--disabled-bg); color:var(--text-dim); }
+  .perm-tag.full{ background:var(--navy); color:#fff; }
+
+  .matrix-card{ background:var(--card); border:1px solid var(--line); border-radius:10px; overflow:auto; max-height:420px; }
+  .matrix-card table{ min-width:1080px; }
+  .chk{ width:17px; height:17px; border-radius:5px; border:2px solid var(--line); display:inline-flex; align-items:center; justify-content:center; font-size:10.5px; color:#fff; }
+  .chk.on{ background:var(--green); border-color:var(--green); }
+  .row-module{ font-weight:600; font-size:11.8px; }
+
+  .phase-block{ margin-bottom:16px; }
+  .phase-title{ font-size:11.8px; font-weight:700; color:var(--blue); text-transform:uppercase; letter-spacing:0.04em; margin-bottom:7px; }
+  .step-chain{ display:flex; gap:8px; overflow-x:auto; padding-bottom:4px; }
+  .step-node{ background:var(--card); border:1px solid var(--line); border-radius:8px; padding:9px 12px; min-width:150px; flex-shrink:0; position:relative; }
+  .step-node .code{ font-size:9.5px; color:var(--text-faint); font-family:'IBM Plex Mono',monospace; }
+  .step-node .label{ font-size:11.5px; font-weight:700; margin:3px 0; }
+  .step-node .actor{ font-size:9.5px; padding:2px 7px; border-radius:20px; background:var(--disabled-bg); color:var(--text-dim); display:inline-block; }
+  .add-node{ display:flex; align-items:center; justify-content:center; color:var(--blue); font-weight:700; font-size:11px; border:1.5px dashed #b7c9df; background:var(--blue-soft); cursor:pointer; min-width:120px; }
+
+  .email-preview{ background:var(--input-bg); border:1px solid var(--line); border-radius:8px; padding:15px; font-size:12px; color:var(--text-dim); line-height:1.7; }
+  .email-preview .subj{ font-weight:700; color:var(--navy); margin-bottom:7px; }
+
+  .alert-list{ display:flex; flex-direction:column; gap:7px; margin-top:10px; }
+  .alert-row{ display:flex; align-items:center; gap:9px; padding:9px 12px; border-radius:8px; font-size:11.8px; }
+  .alert-row.off{ background:var(--green-soft); color:var(--green); }
+  .alert-row.on{ background:var(--red-soft); color:var(--red); }
+  .alert-row .ai{ font-weight:700; }
+
+  @media (max-width:900px){
+    .sidebar{ position:fixed; left:0; top:0; transform:translateX(-100%); box-shadow:4px 0 24px rgba(0,0,0,0.3); }
+    .sidebar.open{ transform:translateX(0); }
+    .close-sidebar{ display:block; }
+    .menu-toggle{ display:block; }
+    .global-search{ order:3; max-width:none; flex-basis:100%; }
+  }
+</style>
+</head>
+<body>
+
+<div class="sidebar" id="sidebar">
+  <div class="brand">
+    <div><div class="name">JLC ELECTRONICS</div><div class="sub">Módulo de Importaciones — Integral</div></div>
+    <button class="close-sidebar" id="closeSidebar">✕</button>
+  </div>
+
+  <div class="nav-group-title">Maestros</div>
+  <div class="nav-item active" data-tab="importadores"><span class="nav-dot"></span>Importadores</div>
+  <div class="nav-item" data-tab="proveedores"><span class="nav-dot"></span>Proveedores</div>
+  <div class="nav-item" data-tab="productos"><span class="nav-dot"></span>Productos</div>
+  <div class="nav-item" data-tab="licencias"><span class="nav-dot"></span>Licencias RETIQ</div>
+
+  <div class="nav-group-title">Compras</div>
+  <div class="nav-item" data-tab="po"><span class="nav-dot"></span>Purchase Order</div>
+  <div class="nav-item" data-tab="correopo"><span class="nav-dot"></span>Correo de envío PO</div>
+
+  <div class="nav-group-title">Comercio Exterior</div>
+  <div class="nav-item" data-tab="pi"><span class="nav-dot"></span>Proforma Invoice</div>
+  <div class="nav-item" data-tab="pagos"><span class="nav-dot"></span>Registro de Pagos</div>
+
+  <div class="nav-group-title">Logística y Aduana</div>
+  <div class="nav-item" data-tab="factura"><span class="nav-dot"></span>Factura Comercial</div>
+  <div class="nav-item" data-tab="aduana"><span class="nav-dot"></span>Aduana / Documental</div>
+  <div class="nav-item" data-tab="costeo"><span class="nav-dot"></span>Costeo y Cierre</div>
+
+  <div class="nav-group-title">Análisis</div>
+  <div class="nav-item" data-tab="reportes"><span class="nav-dot"></span>Reportes</div>
+
+  <div class="nav-group-title">Administración</div>
+  <div class="nav-item" data-tab="usuarios"><span class="nav-dot"></span>Usuarios</div>
+  <div class="nav-item" data-tab="perfiles"><span class="nav-dot"></span>Perfiles y Permisos</div>
+  <div class="nav-item" data-tab="mataduanas"><span class="nav-dot"></span>Matriz Agencias Aduana</div>
+  <div class="nav-item" data-tab="mattransp"><span class="nav-dot"></span>Matriz Transportadoras</div>
+  <div class="nav-item" data-tab="matestados"><span class="nav-dot"></span>Matriz de Estados</div>
+</div>
+
+<div class="main">
+  <div class="topbar">
+    <div class="topbar-left">
+      <button class="menu-toggle" id="menuToggle">☰</button>
+      <div><div class="title" id="pageTitle">Maestro de Importadores</div><div class="sub" id="pageSub">Empresas habilitadas para importar bajo la marca JLC Electronics</div></div>
+    </div>
+    <div class="global-search"><span class="gs-icon">⌕</span><input type="text" placeholder="Buscar PI, PO, DO, proveedor... en todo el sistema"></div>
+    <div class="topbar-right">
+      <button class="theme-toggle" id="themeToggle">🌙 Oscuro</button>
+      <div class="user-chip">Juan Felipe López · Administrador</div>
+    </div>
+  </div>
+
+  <div class="wrap">
+
+    <!-- ============ IMPORTADORES ============ -->
+    <div class="panel active" id="panel-importadores">
+      <div class="toolbar"><input class="search-input" placeholder="Buscar razón social o NIT..."><div style="display:flex; gap:8px"><button class="btn btn-export">⬇ Exportar</button><button class="btn btn-primary">+ Nuevo importador</button></div></div>
+      <div class="table-card"><table>
+        <thead><tr><th>Código</th><th>Razón social</th><th>NIT</th><th>Ciudad</th><th>Agencia habitual</th><th>Estado</th><th>Acciones</th></tr></thead>
+        <tbody>
+          <tr><td>IMP-001</td><td>JL Y RB SAS</td><td>900.738.718-1</td><td>Bogotá</td><td>Aduanimex S.A. Nivel 1</td><td><span class="badge ok">Activo</span></td><td><span class="icon-btn icon-view">⊕</span><span class="icon-btn icon-edit">✎</span></td></tr>
+          <tr><td>IMP-002</td><td>FRATELLI COLOMBIA SAS</td><td>901.225.430-3</td><td>Medellín</td><td>Aduanimex S.A. Nivel 1</td><td><span class="badge ok">Activo</span></td><td><span class="icon-btn icon-view">⊕</span><span class="icon-btn icon-edit">✎</span></td></tr>
+        </tbody>
+      </table></div>
+      <div class="section">
+        <div class="section-title">Ficha — JL Y RB SAS</div>
+        <div class="field-row">
+          <div class="field"><label>Razón social</label><input value="JL Y RB SAS"></div>
+          <div class="field"><label>NIT</label><input value="900.738.718-1"></div>
+          <div class="field"><label>Depósito / bodega autorizada</label><input value="TCBUEN Buenaventura"></div>
+        </div>
+        <div class="btn-row"><button class="btn btn-ghost">Cancelar</button><button class="btn btn-primary">Guardar</button></div>
+      </div>
+      <div class="history-box">
+        <div class="history-head" onclick="this.nextElementSibling.classList.toggle('open')">
+          <div class="history-title">Historial de modificaciones</div><div class="history-toggle">Ver ▾</div>
+        </div>
+        <div class="history-log">
+          <div class="hist-row"><span class="hist-time">2026-01-02 09:14</span><span class="hist-action">Actualizó agencia de aduanas habitual</span><span class="hist-user">J. F. López</span></div>
+          <div class="hist-row"><span class="hist-time">2025-11-18 14:02</span><span class="hist-action">Creó el registro del importador</span><span class="hist-user">J. F. López</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ PROVEEDORES ============ -->
+    <div class="panel" id="panel-proveedores">
+      <div class="toolbar"><input class="search-input" placeholder="Buscar proveedor..."><div style="display:flex; gap:8px"><button class="btn btn-export">⬇ Exportar</button><button class="btn btn-primary">+ Vincular proveedor</button></div></div>
+      <div class="table-card"><table>
+        <thead><tr><th>Código</th><th>Razón social</th><th>País</th><th>Fabricante</th><th>Nivel riesgo</th><th>Habilitado PO</th><th>Estado</th><th>Acciones</th></tr></thead>
+        <tbody>
+          <tr><td>PROV-014</td><td>Midea Electric</td><td>China</td><td><span class="badge ok">Sí</span></td><td><span class="badge ok">Bajo</span></td><td><span class="badge ok">Sí</span></td><td><span class="badge ok">Aprobado</span></td><td><span class="icon-btn icon-view">⊕</span></td></tr>
+          <tr><td>PROV-021</td><td>Whirlpool</td><td>México</td><td><span class="badge ok">Sí</span></td><td><span class="badge ok">Bajo</span></td><td><span class="badge ok">Sí</span></td><td><span class="badge ok">Aprobado</span></td><td><span class="icon-btn icon-view">⊕</span></td></tr>
+          <tr><td>PROV-033</td><td>Samsung LatAm</td><td>Corea del Sur</td><td><span class="badge gray">No</span></td><td><span class="badge warn">Medio</span></td><td><span class="badge danger">No</span></td><td><span class="badge warn">En validación</span></td><td><span class="icon-btn icon-view">⊕</span></td></tr>
+        </tbody>
+      </table></div>
+      <div class="section">
+        <div class="section-title">Condiciones comerciales y capacidad — Midea Electric</div>
+        <div class="field-row">
+          <div class="field"><label>Incoterm habitual</label><select><option>FOB</option><option>CIF</option><option>EXW</option></select></div>
+          <div class="field"><label>% de anticipo</label><input value="30%"></div>
+          <div class="field"><label>Tiempo de producción</label><input value="45 días"></div>
+          <div class="field"><label>Vigencia de precios</label><input value="90 días"></div>
+          <div class="field"><label>Categorías de producto</label><input value="Refrigeración, Lavado"></div>
+          <div class="field"><label>MOQ</label><input value="500 unidades"></div>
+        </div>
+        <div class="doc-list">
+          <div class="doc-row"><div class="doc-check on">✓</div><div><div class="doc-name">ISO 9001</div><div class="doc-req">Vence 14/03/2027</div></div><span class="badge ok">Vigente</span><span class="doc-action">Ver</span></div>
+        </div>
+      </div>
+      <div class="history-box">
+        <div class="history-head" onclick="this.nextElementSibling.classList.toggle('open')"><div class="history-title">Historial de modificaciones</div><div class="history-toggle">Ver ▾</div></div>
+        <div class="history-log">
+          <div class="hist-row"><span class="hist-time">2025-12-20 11:30</span><span class="hist-action">Aprobó proveedor tras validación de cumplimiento</span><span class="hist-user">M. C. Ortiz</span></div>
+          <div class="hist-row"><span class="hist-time">2025-12-18 16:45</span><span class="hist-action">Cargó certificado ISO 9001</span><span class="hist-user">M. C. Ortiz</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ PRODUCTOS ============ -->
+    <div class="panel" id="panel-productos">
+      <div class="toolbar"><input class="search-input" placeholder="Buscar referencia..."><div style="display:flex; gap:8px"><button class="btn btn-export">⬇ Exportar</button><button class="btn btn-primary">+ Codificar producto</button></div></div>
+      <div class="table-card"><table>
+        <thead><tr><th>Referencia JLC</th><th>Nombre</th><th>Proveedor</th><th>Modalidad</th><th>M³ / unidad</th><th>Estado</th></tr></thead>
+        <tbody>
+          <tr><td>JLC-235NVFA</td><td>Nevera 235L No Frost</td><td>Midea Electric</td><td><span class="badge blue">FCL</span></td><td class="num">0,780</td><td><span class="badge ok">Activo</span></td></tr>
+          <tr><td>JLC-235NVFA-B</td><td>Balay 12kg Lavadora</td><td>Whirlpool</td><td><span class="badge gray">LCL</span></td><td class="num">0,410</td><td><span class="badge ok">Activo</span></td></tr>
+        </tbody>
+      </table></div>
+      <div class="section">
+        <div class="section-title">Ficha — JLC-235NVFA (modalidad FCL)</div>
+        <div class="field-row">
+          <div class="field"><label>Largo (m)</label><input value="0.68"></div>
+          <div class="field"><label>Ancho (m)</label><input value="0.60"></div>
+          <div class="field"><label>Alto (m)</label><input value="1.55"></div>
+          <div class="field"><label>Volumen por unidad (m³, auto)</label><input value="0.632" disabled></div>
+          <div class="field"><label>Peso bruto/unidad</label><input value="62 kg"></div>
+          <div class="field"><label>Modalidad habitual</label><select><option>FCL</option><option>LCL</option></select></div>
+        </div>
+        <div class="section-desc">Capacidad por tipo de contenedor:</div>
+        <div class="table-card"><table>
+          <thead><tr><th>Contenedor</th><th class="num">Unidades</th><th class="num">M³ estimados</th><th class="num">Peso neto est.</th></tr></thead>
+          <tbody>
+            <tr><td>20 STD</td><td class="num">180</td><td class="num">28.4</td><td class="num">11.160 kg</td></tr>
+            <tr><td>40 STD</td><td class="num">380</td><td class="num">59.8</td><td class="num">23.560 kg</td></tr>
+            <tr><td>40 HQ</td><td class="num">420</td><td class="num">66.1</td><td class="num">26.040 kg</td></tr>
+          </tbody>
+        </table></div>
+      </div>
+      <div class="section">
+        <div class="section-title">Ficha — JLC-235NVFA-B (modalidad LCL)</div>
+        <div class="section-desc">Campos propios de carga suelta — no aplican los de capacidad por contenedor.</div>
+        <div class="field-row">
+          <div class="field"><label>Cantidad estimada por embarque</label><input value="120 unidades"></div>
+          <div class="field"><label>Volumen total</label><input value="49.2 m³"></div>
+          <div class="field"><label>Peso total</label><input value="4.920 kg"></div>
+          <div class="field"><label>Tipo de embalaje</label><select><option>Caja máster</option><option>Pallet</option><option>Caja individual</option></select></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ LICENCIAS RETIQ ============ -->
+    <div class="panel" id="panel-licencias">
+      <div class="toolbar"><input class="search-input" placeholder="Buscar por referencia o número de licencia..."><div style="display:flex; gap:8px"><button class="btn btn-export">⬇ Exportar</button><button class="btn btn-primary">+ Nuevo trámite</button></div></div>
+      <div class="table-card"><table>
+        <thead><tr><th>Tipo</th><th>Referencia</th><th>N° licencia</th><th>Ente certificador</th><th>Vigencia</th><th>Estado</th></tr></thead>
+        <tbody>
+          <tr><td><span class="badge blue">Sublicencia</span></td><td>JLC-235NVFA</td><td>RQ-2025-8841</td><td>DEKRA</td><td>hasta 22/09/2027</td><td><span class="badge ok">Vigente</span></td></tr>
+          <tr><td><span class="badge blue">Principal</span></td><td>JLC-689NVNFIA</td><td>RQ-2026-0117</td><td>DEKRA</td><td>En trámite</td><td><span class="badge warn">En proceso</span></td></tr>
+        </tbody>
+      </table></div>
+
+      <div class="section">
+        <div class="section-title">Nuevo trámite — RQ-2026-0117</div>
+
+        <div class="section-desc" style="font-size:12.5px; font-weight:700; color:var(--text)">Tipo de trámite <span style="font-weight:400; color:var(--text-dim)">— los requisitos cambian automáticamente</span></div>
+        <div class="prorrateo-toggle">
+          <div class="prorrateo-opt active" id="tipoPrincipalBtn" onclick="setTipoTramite('principal')">Licencia principal <span style="font-weight:400; opacity:0.8">— a nombre de JLC</span></div>
+          <div class="prorrateo-opt" id="tipoSubBtn" onclick="setTipoTramite('sublicencia')">Sublicencia <span style="font-weight:400; opacity:0.8">— basada en la del fabricante</span></div>
+        </div>
+
+        <div class="section-title" style="font-size:12.5px">Información de la licencia <span style="font-weight:400; color:var(--text-faint)">— campo obligatorio marcado con *</span></div>
+        <div class="field-row">
+          <div class="field"><label>Descripción *</label><input placeholder="RETIQ — refrigerador No Frost 689L"></div>
+          <div class="field"><label>Producto *</label><input value="JLC-689NVNFIA"></div>
+          <div class="field"><label>Referencia / Modelo *</label><input value="JLC-689NVNFIA"></div>
+          <div class="field"><label>Proveedor / Fabricante *</label><input value="Midea Electric"></div>
+          <div class="field"><label>Número de licencia</label><input value="RQ-2026-0117"></div>
+          <div class="field"><label>Propietario *</label><select><option>JLC Electronics</option><option>Fabricante</option></select></div>
+          <div class="field"><label>Fecha de inicio *</label><input type="date"></div>
+          <div class="field"><label>Fecha de vencimiento / vigencia *</label><input type="date"></div>
+        </div>
+
+        <!-- Documentos — LICENCIA PRINCIPAL -->
+        <div id="docsPrincipal">
+          <div class="toolbar" style="margin-bottom:6px"><div class="section-title" style="margin:0; font-size:12.5px">Documentos para licencia principal</div><span class="badge warn">3 de 10 cargados</span></div>
+          <div class="doc-list">
+            <div class="doc-row"><div class="doc-check on">✓</div><div><div class="doc-name">ISO 9001 actualizado</div></div><span class="badge ok">Cargado</span><span class="doc-action">Ver</span></div>
+            <div class="doc-row"><div class="doc-check on">✓</div><div><div class="doc-name">Test Report de fábrica</div></div><span class="badge ok">Cargado</span><span class="doc-action">Ver</span></div>
+            <div class="doc-row"><div class="doc-check on">✓</div><div><div class="doc-name">Flujo del proceso de ensamble</div></div><span class="badge ok">Cargado</span><span class="doc-action">Ver</span></div>
+            <div class="doc-row"><div class="doc-check"></div><div><div class="doc-name">Componentes críticos</div></div><span class="badge warn">Pendiente</span><span class="doc-action">Cargar</span></div>
+            <div class="doc-row"><div class="doc-check"></div><div><div class="doc-name">Registro de producción</div></div><span class="badge warn">Pendiente</span><span class="doc-action">Cargar</span></div>
+            <div class="doc-row"><div class="doc-check"></div><div><div class="doc-name">Declaración del material de la etiqueta</div><div class="doc-req">Papel mín. 75 g/m² o plástico mín. 45 g/m², carta con logo JLC</div></div><span class="badge warn">Pendiente</span><span class="doc-action">Cargar</span></div>
+            <div class="doc-row"><div class="doc-check"></div><div><div class="doc-name">Manual de usuario JLC</div></div><span class="badge warn">Pendiente</span><span class="doc-action">Cargar</span></div>
+            <div class="doc-row"><div class="doc-check"></div><div><div class="doc-name">Rating label</div></div><span class="badge warn">Pendiente</span><span class="doc-action">Cargar</span></div>
+            <div class="doc-row"><div class="doc-check"></div><div><div class="doc-name">Diseño de caja</div></div><span class="badge warn">Pendiente</span><span class="doc-action">Cargar</span></div>
+            <div class="doc-row"><div class="doc-check"></div><div><div class="doc-name">Material POP</div></div><span class="badge warn">Pendiente</span><span class="doc-action">Cargar</span></div>
+            <div class="doc-row"><div class="doc-check"></div><div><div class="doc-name">Diseño de etiqueta RETIQ</div></div><span class="badge warn">Pendiente</span><span class="doc-action">Cargar</span></div>
+            <div class="doc-row"><div class="doc-check"></div><div><div class="doc-name">Fotografías HD del producto</div></div><span class="badge warn">Pendiente</span><span class="doc-action">Cargar</span></div>
+          </div>
+        </div>
+
+        <!-- Documentos — SUBLICENCIA -->
+        <div id="docsSublicencia" style="display:none">
+          <div class="toolbar" style="margin-bottom:6px"><div class="section-title" style="margin:0; font-size:12.5px">Documentos para sublicencia</div><span class="badge warn">0 de 8 cargados</span></div>
+          <div class="section-desc">La sublicencia se apoya en la certificación que ya tiene el fabricante — por eso no pide ISO 9001, flujo de ensamble ni registro de producción; en cambio exige la prueba de esa licencia principal ya existente.</div>
+          <div class="doc-list">
+            <div class="doc-row"><div class="doc-check"></div><div><div class="doc-name">Etiqueta RETIQ principal del fabricante</div></div><span class="badge warn">Pendiente</span><span class="doc-action">Cargar</span></div>
+            <div class="doc-row"><div class="doc-check"></div><div><div class="doc-name">Licencia principal del fabricante</div><div class="doc-req">La certificación original que la sublicencia hereda</div></div><span class="badge warn">Pendiente</span><span class="doc-action">Cargar</span></div>
+            <div class="doc-row"><div class="doc-check"></div><div><div class="doc-name">Test Report</div></div><span class="badge warn">Pendiente</span><span class="doc-action">Cargar</span></div>
+            <div class="doc-row"><div class="doc-check"></div><div><div class="doc-name">Rating label JLC</div></div><span class="badge warn">Pendiente</span><span class="doc-action">Cargar</span></div>
+            <div class="doc-row"><div class="doc-check"></div><div><div class="doc-name">Manual de usuario JLC</div></div><span class="badge warn">Pendiente</span><span class="doc-action">Cargar</span></div>
+            <div class="doc-row"><div class="doc-check"></div><div><div class="doc-name">Material POP JLC</div></div><span class="badge warn">Pendiente</span><span class="doc-action">Cargar</span></div>
+            <div class="doc-row"><div class="doc-check"></div><div><div class="doc-name">Etiqueta RETIQ JLC</div></div><span class="badge warn">Pendiente</span><span class="doc-action">Cargar</span></div>
+            <div class="doc-row"><div class="doc-check"></div><div><div class="doc-name">Diseño de caja</div></div><span class="badge warn">Pendiente</span><span class="doc-action">Cargar</span></div>
+          </div>
+        </div>
+
+        <div class="section-title" style="font-size:12.5px">Ente certificador y destinatarios <span style="font-weight:400; color:var(--text-faint)">— contactos tomados de Configuración</span></div>
+        <div class="field-row">
+          <div class="field"><label>Ente certificador</label><select><option>Seleccionar...</option><option>SGS Colombia</option><option selected>DEKRA</option><option>Bureau Veritas</option><option>Intertek</option><option>Otro configurado</option></select></div>
+          <div class="field"><label>Destinatarios del correo</label><select><option>Sin destinatarios seleccionados</option><option>Contacto DEKRA — trámites@dekra.com.co</option></select></div>
+        </div>
+
+        <div class="field"><label>Observaciones del trámite</label><input placeholder="Información que se incluirá en el correo"></div>
+
+        <div class="toolbar" style="margin-top:14px">
+          <div>
+            <div class="section-title" style="font-size:12.5px; margin-bottom:2px">Completitud del expediente</div>
+            <div class="progress-bar" style="width:140px"><div class="progress-fill warn" style="width:55%"></div></div>
+            <span style="font-size:11.5px; color:var(--text-dim)">Complete los campos obligatorios y cargue todos los documentos.</span>
+          </div>
+        </div>
+        <div class="btn-row"><button class="btn btn-ghost">Guardar borrador</button><button class="btn btn-primary">Enviar al certificador</button></div>
+      </div>
+
+      <div class="section">
+        <div class="toolbar" style="margin-bottom:6px"><div class="section-title" style="margin:0">Documentos finales de la certificación — RQ-2026-0117</div><span class="badge blue">Pendiente de aprobación</span></div>
+        <div class="doc-list">
+          <div class="doc-row"><div class="doc-check on">✓</div><div><div class="doc-name">Certificado definitivo emitido por el ente certificador</div><div class="doc-req">PDF</div></div><span class="badge ok">Cargado</span><span class="doc-action">Ver</span></div>
+          <div class="doc-row"><div class="doc-check"></div><div><div class="doc-name">Excel de referencias certificadas</div></div><span class="badge warn">Pendiente</span><span class="doc-action">Cargar</span></div>
+          <div class="doc-row"><div class="doc-check"></div><div><div class="doc-name">Soporte(s) SICERCO</div><div class="doc-req">Una o varias imágenes que evidencien el registro</div></div><span class="badge warn">Pendiente</span><span class="doc-action">Seleccionar imágenes</span></div>
+        </div>
+        <div style="margin-top:10px">
+          <div class="section-desc" style="margin-bottom:4px">Completitud del cierre: <b>1 de 3</b> — cargue los documentos cuando el ente certificador emita la aprobación.</div>
+          <div class="progress-bar" style="width:140px"><div class="progress-fill warn" style="width:33%"></div></div>
+        </div>
+        <div class="btn-row"><button class="btn btn-disabled" disabled>Cerrar certificación (faltan 2 documentos)</button></div>
+      </div>
+
+      <div class="history-box">
+        <div class="history-head" onclick="this.nextElementSibling.classList.toggle('open')"><div class="history-title">Historial del trámite</div><div class="history-toggle">Ver ▾</div></div>
+        <div class="history-log">
+          <div class="hist-row"><span class="hist-time">2026-01-08 10:12</span><span class="hist-action">Cargó Test Report de fábrica</span><span class="hist-user">E. Torres</span></div>
+          <div class="hist-row"><span class="hist-time">2026-01-05 09:00</span><span class="hist-action">Creó el trámite en estado Borrador</span><span class="hist-user">E. Torres</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ PURCHASE ORDER ============ -->
+    <div class="panel" id="panel-po">
+      <div class="toolbar"><input class="search-input" placeholder="Buscar PO, proveedor..."><div style="display:flex; gap:8px"><button class="btn btn-export">⬇ Exportar</button><button class="btn btn-primary">+ Nueva PO</button></div></div>
+      <div class="table-card"><table>
+        <thead><tr><th>N° PO</th><th>Proveedor</th><th>Incoterm</th><th class="num">Valor total</th><th>ETD</th><th>Estado</th><th>Acciones</th></tr></thead>
+        <tbody>
+          <tr><td>PO-2026-0042</td><td>Midea Electric</td><td>FOB</td><td class="num">USD 420.000</td><td>2026-01-15</td><td><span class="badge blue">Enviada</span></td><td><span class="icon-btn icon-view">⊕</span><span class="icon-btn icon-print">🖶</span></td></tr>
+          <tr><td>PO-2026-0045</td><td>Whirlpool</td><td>CIF</td><td class="num">USD 310.652</td><td>2026-02-02</td><td><span class="badge ok">Confirmada</span></td><td><span class="icon-btn icon-view">⊕</span></td></tr>
+        </tbody>
+      </table></div>
+
+      <div class="trace-bar">
+        <span class="trace-lbl">Trazabilidad PO-2026-0042</span>
+        <span class="trace-pill" onclick="goTab('proveedores')">Proveedor: Midea Electric</span><span class="trace-arrow">→</span>
+        <span class="trace-pill current">PO-2026-0042</span><span class="trace-arrow">→</span>
+        <span class="trace-pill" onclick="goTab('pi')">PI-REF-JLC-20260710</span><span class="trace-arrow">→</span>
+        <span class="trace-pill" onclick="goTab('pagos')">2 pagos</span><span class="trace-arrow">→</span>
+        <span class="trace-pill" onclick="goTab('factura')">Factura MDRHSBOL2670013</span><span class="trace-arrow">→</span>
+        <span class="trace-pill" onclick="goTab('aduana')">DO M0301479MDE-BUN</span>
+      </div>
+
+      <div class="section">
+        <div class="section-title">PO-2026-0042 — Midea Electric</div>
+        <div class="section-desc">Estado <b>Enviada</b>: no editable directamente — cualquier cambio crea PO-2026-0042-V2 y reemplaza esta versión, conservando el historial.</div>
+        <div class="stepper">
+          <div class="step done"><div class="dot">✓</div><div class="lbl">Borrador</div></div>
+          <div class="step done"><div class="dot">✓</div><div class="lbl">Pend. aprobación</div></div>
+          <div class="step done"><div class="dot">✓</div><div class="lbl">Aprobada</div></div>
+          <div class="step current"><div class="dot">4</div><div class="lbl">Enviada</div></div>
+          <div class="step"><div class="dot">5</div><div class="lbl">Confirmada</div></div>
+          <div class="step"><div class="dot">6</div><div class="lbl">Cerrada</div></div>
+        </div>
+
+        <div class="section-title" style="font-size:12.5px; margin-top:4px">Ruta</div>
+        <div class="field-row">
+          <div class="field"><label>Puerto de embarque</label><input value="Ningbo, China"></div>
+          <div class="field"><label>Puerto de destino</label><input value="Buenaventura, Colombia"></div>
+          <div class="field"><label>ETD</label><input value="2026-01-15"></div>
+          <div class="field"><label>ETA</label><input value="2026-02-10"></div>
+        </div>
+
+        <div class="section-title" style="font-size:12.5px">Resumen financiero</div>
+        <div class="table-card"><table>
+          <thead><tr><th>Concepto</th><th class="num">Valor</th></tr></thead>
+          <tbody>
+            <tr><td>Total unidades</td><td class="num">2.190</td></tr>
+            <tr><td>Subtotal</td><td class="num">USD 412.500,00</td></tr>
+            <tr><td>Descuento</td><td class="num">USD −8.500,00</td></tr>
+            <tr><td>Flete</td><td class="num">USD 12.500,00</td></tr>
+            <tr><td>Seguro</td><td class="num">USD 1.850,00</td></tr>
+            <tr><td><b>Total PO</b></td><td class="num"><b>USD 420.000,00</b></td></tr>
+            <tr><td>Contenedores</td><td class="num">2 x 40HQ</td></tr>
+          </tbody>
+        </table></div>
+      </div>
+
+      <div class="history-box">
+        <div class="history-head" onclick="this.nextElementSibling.classList.toggle('open')"><div class="history-title">Historial de la PO</div><div class="history-toggle">Ver ▾</div></div>
+        <div class="history-log">
+          <div class="hist-row"><span class="hist-time">2026-01-02 10:05</span><span class="hist-action">PO enviada al proveedor por correo</span><span class="hist-user">E. Torres</span></div>
+          <div class="hist-row"><span class="hist-time">2026-01-01 17:20</span><span class="hist-action">Aprobó la PO</span><span class="hist-user">J. F. López</span></div>
+          <div class="hist-row"><span class="hist-time">2025-12-30 09:40</span><span class="hist-action">Creó la PO en estado Borrador</span><span class="hist-user">M. C. Ortiz</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ CORREO PO ============ -->
+    <div class="panel" id="panel-correopo">
+      <div class="section">
+        <div class="section-title">Correo de envío — PO-2026-0042</div>
+        <div class="email-preview">
+          <div class="subj">Subject: New Purchase Order PO-2026-0042 — Midea Electric</div>
+          Dear Wei Zhang,<br><br>
+          PO Number: PO-2026-0042 · Creation Date: 2026-01-02 · Required Delivery Date: 2026-01-15 · Currency: USD ·
+          Incoterm: FOB — Ningbo Port · Payment Terms: 30% advance, 70% against BL · Port of Loading: Ningbo ·
+          Port of Discharge: Buenaventura · Total PO Value: USD 420.000,00<br><br>
+          Please confirm acceptance, models/quantities, production lead time, estimated shipment date, and document availability.<br><br>
+          Best regards,<br>Comercio Exterior — JLC Electronics
+        </div>
+        <div class="btn-row"><button class="btn btn-ghost">Editar antes de enviar</button><button class="btn btn-primary">Enviar al proveedor</button></div>
+      </div>
+    </div>
+
+    <!-- ============ PROFORMA INVOICE ============ -->
+    <div class="panel" id="panel-pi">
+      <div class="trace-bar">
+        <span class="trace-lbl">Trazabilidad</span>
+        <span class="trace-pill" onclick="goTab('po')">PO-2026-0042</span><span class="trace-arrow">→</span>
+        <span class="trace-pill current">PI-REF-JLC-20260710</span><span class="trace-arrow">→</span>
+        <span class="trace-pill" onclick="goTab('pagos')">Pagos</span><span class="trace-arrow">→</span>
+        <span class="trace-pill" onclick="goTab('factura')">Factura</span>
+      </div>
+      <div class="upload-zone">Arrastra la PI del proveedor (PDF, Excel o imagen) o <b>selecciona archivo</b></div>
+      <div class="section">
+        <div class="section-title">PI-REF-JLC-20260710 — información extraída por IA</div>
+        <div class="section-desc">Todos los campos son editables antes de confirmar — la IA nunca sobrescribe los valores originales de la PO.</div>
+        <div class="field-row">
+          <div class="field"><label>Número de PI</label><input value="PI-REF-JLC-20260710"></div>
+          <div class="field"><label>Versión</label><input value="V1"></div>
+          <div class="field"><label>Estado de versión</label><select><option>Vigente</option><option>Reemplazada</option></select></div>
+          <div class="field"><label>Fecha de emisión</label><input value="2026-01-03"></div>
+          <div class="field"><label>Proveedor</label><input value="Midea Electric"></div>
+          <div class="field"><label>Moneda</label><input value="USD"></div>
+          <div class="field"><label>Incoterm</label><input value="FOB"></div>
+          <div class="field"><label>Lugar convenido</label><input value="Ningbo Port"></div>
+          <div class="field"><label>Forma de pago</label><input value="30% anticipo / 70% contra BL"></div>
+          <div class="field"><label>ETD</label><input value="2026-01-15"></div>
+          <div class="field"><label>Vigencia de precio</label><input value="90 días"></div>
+          <div class="field"><label>Tiempo de producción</label><input value="45 días"></div>
+          <div class="field"><label>Garantía</label><input value="12 meses"></div>
+        </div>
+        <div class="table-card"><table>
+          <thead><tr><th>Referencia</th><th>Concepto</th><th>PO</th><th>PI</th><th>Estado</th></tr></thead>
+          <tbody>
+            <tr><td>JLC-235NVFA</td><td>Cantidad</td><td class="num">612</td><td class="num">612</td><td><span class="badge ok">Igual</span></td></tr>
+            <tr><td>JLC-325NVNFIA</td><td>Valor unitario</td><td class="num">USD 145,00</td><td class="num">USD 148,50</td><td><span class="badge warn">Diferencia</span></td></tr>
+          </tbody>
+        </table></div>
+        <div class="section-desc" style="margin-top:8px">Diferencia JLC-325NVNFIA: <b>Motivo</b> — alza de materia prima. <b>Aprobó</b> E. Torres, 2026-01-05.</div>
+      </div>
+      <div class="section">
+        <div class="section-title">Control logístico</div>
+        <div class="field-row">
+          <div class="field"><label>Contenedores confirmados</label><input value="2x40HQ"></div>
+          <div class="field"><label>Booking</label><input value="MSCUBV104521"></div>
+          <div class="field"><label>Estado</label><select><option>Embarcado</option><option>Pendiente</option></select></div>
+        </div>
+      </div>
+      <div class="history-box">
+        <div class="history-head" onclick="this.nextElementSibling.classList.toggle('open')"><div class="history-title">Historial de la PI</div><div class="history-toggle">Ver ▾</div></div>
+        <div class="history-log">
+          <div class="hist-row"><span class="hist-time">2026-01-05 11:15</span><span class="hist-action">Aprobó diferencia de valor unitario en JLC-325NVNFIA</span><span class="hist-user">E. Torres</span></div>
+          <div class="hist-row"><span class="hist-time">2026-01-03 08:50</span><span class="hist-action">Cargó PI y extrajo datos por IA</span><span class="hist-user">E. Torres</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ REGISTRO DE PAGOS ============ -->
+    <div class="panel" id="panel-pagos">
+      <div class="trace-bar">
+        <span class="trace-lbl">Trazabilidad</span>
+        <span class="trace-pill" onclick="goTab('pi')">PI-REF-JLC-20260710</span><span class="trace-arrow">→</span>
+        <span class="trace-pill current">Pagos</span><span class="trace-arrow">→</span>
+        <span class="trace-pill" onclick="goTab('factura')">Factura</span>
+      </div>
+      <div class="section-desc" style="margin-bottom:14px">Módulo canónico de pagos — el formulario de Proforma Invoice enlaza aquí; no hay doble registro. <b>Toda asignación es manual</b>: no existe modo de prorrateo automático — si un pago no se desglosa por referencia, el sistema no permite guardarlo.</div>
+      <div class="table-card"><table>
+        <thead><tr><th>PI</th><th>Tipo</th><th>Fecha</th><th class="num">Valor USD</th><th class="num">TRM</th><th class="num">Total COP</th><th>Decl. Cambio</th><th>Asignación</th><th>Soportes</th></tr></thead>
+        <tbody>
+          <tr><td>PI-REF-JLC-20260710</td><td><span class="badge blue">Anticipo</span></td><td>2026-01-03</td><td class="num">126.000,00</td><td class="num">4.120,50</td><td class="num">519.183.000</td><td>DC-2026-004821</td><td><span class="badge ok">Manual · completa</span></td><td><span class="icon-btn icon-view">⊕</span></td></tr>
+          <tr><td>PI-REF-JLC-20260710</td><td><span class="badge blue">Saldo</span></td><td>2026-01-10</td><td class="num">93.196,00</td><td class="num">4.135,10</td><td class="num">385.376.988</td><td>DC-2026-005130</td><td><span class="badge ok">Manual · completa</span></td><td><span class="icon-btn icon-view">⊕</span></td></tr>
+        </tbody>
+      </table></div>
+      <div class="section">
+        <div class="section-title">Registrar nuevo movimiento</div>
+        <div class="field-row">
+          <div class="field"><label>PI relacionada</label><select id="payPiSelect"><option>PI-REF-JLC-20260710</option></select></div>
+          <div class="field"><label>Tipo de pago</label><select><option>Anticipo</option><option>Saldo</option><option>Flete</option><option>Seguro</option></select></div>
+          <div class="field"><label>Fecha del movimiento</label><input type="date" value="2026-01-10"></div>
+          <div class="field"><label>Dólares negociados (total)</label><input id="payTotalUsd" value="93196.00" oninput="checkAllocation()"></div>
+          <div class="field"><label>TRM negociada</label><input value="4135.10"></div>
+          <div class="field"><label>Total COP (auto)</label><input value="385.376.988" disabled></div>
+          <div class="field"><label>N° Declaración de Cambio (BanRep)</label><input placeholder="Obligatorio para pago al exterior"></div>
+        </div>
+        <div class="alert-list">
+          <div class="alert-row on"><span class="ai">⚠</span> Sin número de Declaración de Cambio no se puede registrar el pago — es el respaldo legal exigido por el régimen cambiario colombiano para cualquier giro de importación.</div>
+        </div>
+
+        <div class="section-title" style="font-size:12.5px">Detalle obligatorio — a qué referencias y cantidades aplica este pago</div>
+        <div class="section-desc">La suma de "Valor de este pago" debe ser exactamente igual al total negociado de arriba — si no cuadra, el pago no se puede guardar.</div>
+        <div class="table-card"><table>
+          <thead><tr><th>Referencia</th><th class="num">Cant. total PI</th><th class="num">Pagada anteriormente</th><th class="num">Cant. de este pago</th><th class="num">Valor unitario</th><th class="num">Valor de este pago</th></tr></thead>
+          <tbody>
+            <tr><td>JLC-235NVFA</td><td class="num">612</td><td class="num">612</td><td class="num">0</td><td class="num">USD 98,00</td><td class="num">USD 0,00</td></tr>
+            <tr><td>JLC-325NVNFIA</td><td class="num">818</td><td class="num">245</td><td class="num"><input class="tl-input" style="width:70px" value="573"></td><td class="num">USD 145,00</td><td class="num" id="allocLine1">USD 83.085,00</td></tr>
+            <tr><td>JLC-689NVNFIA</td><td class="num">760</td><td class="num">0</td><td class="num"><input class="tl-input" style="width:70px" value="48"></td><td class="num">USD 210,00</td><td class="num" id="allocLine2">USD 10.080,00</td></tr>
+            <tr style="font-weight:700"><td colspan="5">Suma asignada</td><td class="num" id="allocSum">USD 93.165,00</td></tr>
+          </tbody>
+        </table></div>
+        <div class="alert-list">
+          <div class="alert-row on" id="allocWarning"><span class="ai">⚠</span> Diferencia de USD 31,00 entre el total negociado y la suma asignada por referencia — ajusta las cantidades antes de guardar.</div>
+        </div>
+
+        <div class="btn-row"><button class="btn btn-ghost">Guardar borrador</button><button class="btn btn-disabled" disabled title="La asignación no cuadra con el total">Registrar pago</button></div>
+      </div>
+      <div class="history-box">
+        <div class="history-head" onclick="this.nextElementSibling.classList.toggle('open')"><div class="history-title">Historial de pagos</div><div class="history-toggle">Ver ▾</div></div>
+        <div class="history-log">
+          <div class="hist-row"><span class="hist-time">2026-01-10 16:20</span><span class="hist-action">Registró saldo USD 93.165 — asignado manualmente a JLC-325NVNFIA (573 uds.) y JLC-689NVNFIA (48 uds.)</span><span class="hist-user">L. Ramírez</span></div>
+          <div class="hist-row"><span class="hist-time">2026-01-03 15:40</span><span class="hist-action">Registró anticipo USD 126.000 (TRM 4.120,50) — asignado manualmente a JLC-235NVFA y JLC-325NVNFIA</span><span class="hist-user">L. Ramírez</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ FACTURA COMERCIAL ============ -->
+    <div class="panel" id="panel-factura">
+      <div class="trace-bar">
+        <span class="trace-lbl">Trazabilidad</span>
+        <span class="trace-pill" onclick="goTab('pagos')">Pagos</span><span class="trace-arrow">→</span>
+        <span class="trace-pill current">Factura MDRHSBOL2670013</span><span class="trace-arrow">→</span>
+        <span class="trace-pill" onclick="goTab('aduana')">DO M0301479MDE-BUN</span>
+      </div>
+      <div class="upload-zone">Arrastra la factura comercial del proveedor o <b>selecciona archivo</b></div>
+      <div class="section">
+        <div class="section-title">Paso 1 — Relacionar documento origen</div>
+        <div class="section-desc">Relacionar directo con la PO solo cuando esa PO nunca tuvo una PI formal. Si la PO ya tiene PI(s), debes elegir la PI específica — de ahí es de donde salen los pagos.</div>
+        <div class="field-row">
+          <div class="field"><label>Consignatario</label><select><option>JL Y RB SAS</option><option>FRATELLI COLOMBIA SAS</option></select></div>
+          <div class="field"><label>Tipo de transporte</label><select><option>Marítimo</option><option>Aéreo</option><option>Terrestre</option></select></div>
+          <div class="field"><label>Relacionar por</label><select id="relTipo" onchange="toggleRelacion()"><option value="pi">Proforma Invoice (recomendado)</option><option value="po">Purchase Order directa</option></select></div>
+        </div>
+        <div class="field-row" id="relPiRow">
+          <div class="field"><label>Proforma Invoice</label><select><option>PI-REF-JLC-20260710 (PO-2026-0042 · Midea Electric)</option></select></div>
+          <div class="field"><label>Incoterm de la PI</label><input value="FOB" disabled></div>
+          <div class="field"><label>Incoterm de esta factura</label><select><option>FOB</option><option>CIF</option><option>CFR</option></select></div>
+        </div>
+        <div class="alert-list" id="incotermWarning">
+          <div class="alert-row on"><span class="ai">⚠</span> Esta factura llegó en CIF pero la PI se negoció en FOB — el sistema restará flete y seguro antes de comparar valores, para no comparar peras con naranjas.</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="toolbar" style="margin-bottom:6px"><div class="section-title" style="margin:0">Paso 2 — Traer pagos de la PI</div><button class="btn btn-primary">⤓ Traer pagos de PI-REF-JLC-20260710</button></div>
+        <div class="section-desc">Pagos registrados contra esta PI. Todos con asignación manual por referencia — el sistema no permite guardar un pago sin ese desglose, así que aquí no hay estimaciones que confirmar.</div>
+        <div class="table-card"><table>
+          <thead><tr><th>Pago</th><th>Tipo</th><th>Referencia</th><th class="num">Cant. asignada</th><th class="num">Valor USD</th><th class="num">TRM pago</th><th class="num">Valor COP</th></tr></thead>
+          <tbody>
+            <tr><td rowspan="2">Pago #1 · 03/01/2026</td><td rowspan="2"><span class="badge blue">Anticipo</span></td><td>JLC-235NVFA</td><td class="num">612</td><td class="num">59.976,00</td><td class="num">4.120,50</td><td class="num">247.191.780</td></tr>
+            <tr><td>JLC-325NVNFIA</td><td class="num">245</td><td class="num">36.015,00</td><td class="num">4.120,50</td><td class="num">148.407.938</td></tr>
+            <tr><td rowspan="2">Pago #2 · 10/01/2026</td><td rowspan="2"><span class="badge blue">Saldo</span></td><td>JLC-325NVNFIA</td><td class="num">573</td><td class="num">83.085,00</td><td class="num">4.135,10</td><td class="num">343.462.634</td></tr>
+            <tr><td>JLC-689NVNFIA</td><td class="num">48</td><td class="num">10.080,00</td><td class="num">4.135,10</td><td class="num">41.674.848</td></tr>
+          </tbody>
+        </table></div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Paso 3 — Conciliación y consolidación por producto</div>
+        <div class="section-desc">Cruce entre lo pagado (asignado manualmente arriba), lo facturado en este documento y lo acumulado contra la PI — a valor <b>FOB normalizado</b> para que Incoterms distintos no distorsionen la comparación.</div>
+        <div class="table-card"><table>
+          <thead><tr><th>Referencia</th><th class="num">Cant. PI</th><th class="num">Cant. pagada</th><th class="num">Valor pagado (FOB)</th><th class="num">Facturado ant.</th><th class="num">Factura actual</th><th class="num">Acumulado</th><th class="num">Pendiente PI</th><th class="num">Saldo pagado</th><th>Estado</th></tr></thead>
+          <tbody>
+            <tr><td>JLC-235NVFA</td><td class="num">612</td><td class="num">612</td><td class="num">USD 59.976</td><td class="num">0</td><td class="num">612</td><td class="num">612</td><td class="num">0</td><td class="num">USD 0</td><td><span class="badge ok">Completo</span></td></tr>
+            <tr><td>JLC-325NVNFIA</td><td class="num">818</td><td class="num">818</td><td class="num">USD 119.100</td><td class="num">0</td><td class="num">245</td><td class="num">245</td><td class="num">573</td><td class="num">USD 83.085</td><td><span class="badge warn">Parcial</span></td></tr>
+            <tr><td>JLC-689NVNFIA</td><td class="num">760</td><td class="num">48</td><td class="num">USD 10.080</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">760</td><td class="num">USD 10.080</td><td><span class="badge warn">Sin facturar</span></td></tr>
+          </tbody>
+        </table></div>
+        <div class="section-title" style="font-size:12.5px">Alertas de conciliación</div>
+        <div class="alert-list">
+          <div class="alert-row off"><span class="ai">✓</span> Ninguna factura supera las cantidades pagadas</div>
+          <div class="alert-row off"><span class="ai">✓</span> Ninguna factura supera las cantidades de la PI</div>
+          <div class="alert-row off"><span class="ai">✓</span> Ningún valor facturado supera lo pagado</div>
+          <div class="alert-row on"><span class="ai">⚠</span> JLC-325NVNFIA: 573 unidades pagadas sin facturar aún (USD 83.085)</div>
+          <div class="alert-row on"><span class="ai">⚠</span> JLC-689NVNFIA: pagado por completo (48 uds.) pero sin ninguna factura recibida</div>
+          <div class="alert-row off"><span class="ai">✓</span> Sin despachos finales con cantidades pendientes</div>
+        </div>
+      </div>
+      <div class="section">
+        <div class="section-title">Documentación del despacho</div>
+        <div class="doc-list">
+          <div class="doc-row"><div class="doc-check on">✓</div><div><div class="doc-name">MBL (naviera)</div></div><span class="badge ok">Cargado</span><span class="doc-action">Ver</span></div>
+          <div class="doc-row"><div class="doc-check on">✓</div><div><div class="doc-name">HBL (agente de carga)</div></div><span class="badge ok">Cargado</span><span class="doc-action">Ver</span></div>
+          <div class="doc-row"><div class="doc-check"></div><div><div class="doc-name">Serial List</div></div><span class="badge warn">Pendiente</span><span class="doc-action">Cargar</span></div>
+          <div class="doc-row"><div class="doc-check"></div><div><div class="doc-name">Spare Parts Packing List</div></div><span class="badge warn">Pendiente</span><span class="doc-action">Cargar</span></div>
+        </div>
+      </div>
+      <div class="history-box">
+        <div class="history-head" onclick="this.nextElementSibling.classList.toggle('open')"><div class="history-title">Historial de la factura</div><div class="history-toggle">Ver ▾</div></div>
+        <div class="history-log">
+          <div class="hist-row"><span class="hist-time">2026-01-20 09:00</span><span class="hist-action">Cargó MBL y HBL</span><span class="hist-user">C. Muñoz</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ ADUANA / DOCUMENTAL ============ -->
+    <div class="panel" id="panel-aduana">
+      <div class="trace-bar">
+        <span class="trace-lbl">Trazabilidad</span>
+        <span class="trace-pill" onclick="goTab('factura')">Factura MDRHSBOL2670013</span><span class="trace-arrow">→</span>
+        <span class="trace-pill current">DO M0301479MDE-BUN</span><span class="trace-arrow">→</span>
+        <span class="trace-pill" onclick="goTab('costeo')">Costeo</span>
+      </div>
+      <div class="section">
+        <div class="toolbar" style="margin-bottom:6px"><div class="section-title" style="margin:0">DO M0301479MDE-BUN</div><span class="badge blue">Documentos enviados</span></div>
+        <div class="stepper">
+          <div class="step done"><div class="dot">✓</div><div class="lbl">Asignación agencia</div></div>
+          <div class="step done"><div class="dot">✓</div><div class="lbl">Documentos enviados</div></div>
+          <div class="step current"><div class="dot">3</div><div class="lbl">Radicado DIAN</div></div>
+          <div class="step"><div class="dot">4</div><div class="lbl">Con levante</div></div>
+          <div class="step"><div class="dot">5</div><div class="lbl">Liberado</div></div>
+          <div class="step"><div class="dot">6</div><div class="lbl">Retirado</div></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>Agencia de aduanas</label><select><option>Aduanimex S.A. Nivel 1</option></select></div>
+          <div class="field"><label>Estado de levante</label><input value="Automático"></div>
+          <div class="field"><label>Fecha asignación</label><input type="date" value="2026-01-02"></div>
+        </div>
+        <div class="doc-list">
+          <div class="doc-row"><div class="doc-check on">✓</div><div><div class="doc-name">Commercial Invoice</div></div><span class="badge ok">Cargado</span><span class="doc-action">Ver</span></div>
+          <div class="doc-row"><div class="doc-check"></div><div><div class="doc-name">Poder aduanero</div></div><span class="badge warn">Pendiente</span><span class="doc-action">Cargar</span></div>
+        </div>
+        <div class="btn-row"><button class="btn btn-primary">Generar correo a la agencia</button></div>
+      </div>
+      <div class="section" style="background:var(--red-soft); border-color:var(--red)">
+        <div class="toolbar" style="margin-bottom:0">
+          <div>
+            <div class="section-title" style="color:var(--red); margin-bottom:2px">⏱ Plazo para evitar declaratoria de abandono</div>
+            <div class="section-desc" style="margin-bottom:0">La naviera/depósito reporta abandono ante la autoridad si no hay instrucción de retiro dentro del plazo — control activo desde la fecha de arribo, no desde la asignación a la agencia.</div>
+          </div>
+          <div class="indicator" style="border-color:var(--red); min-width:100px">
+            <div class="num2" style="color:var(--red)">3</div><div class="lbl">Días restantes</div>
+          </div>
+        </div>
+      </div>
+      <div class="section">
+        <div class="section-title">Seguimiento de fechas</div>
+        <div class="timeline">
+          <div class="tl-row"><div class="tl-label">Fecha recepción documentos</div><input class="tl-input" type="date" value="2026-01-02"><span class="tl-days">—</span></div>
+          <div class="tl-row"><div class="tl-label">Fecha radicación DIAN</div><input class="tl-input" type="date" placeholder="Pendiente"><span class="tl-days warn">2 días</span></div>
+          <div class="tl-row"><div class="tl-label">Fecha levante</div><input class="tl-input" type="date" placeholder="Pendiente"><span class="tl-days">—</span></div>
+          <div class="tl-row"><div class="tl-label">Fecha retiro total</div><input class="tl-input" type="date" placeholder="Pendiente"><span class="tl-days">—</span></div>
+        </div>
+        <div class="indicator-grid">
+          <div class="indicator"><div class="num2 ok">2</div><div class="lbl">Liberación</div></div>
+          <div class="indicator"><div class="num2 ok">0</div><div class="lbl">Aduanimex</div></div>
+          <div class="indicator"><div class="num2 ok">1</div><div class="lbl">Planilla</div></div>
+          <div class="indicator"><div class="num2 ok">1</div><div class="lbl">Despacho</div></div>
+          <div class="indicator"><div class="num2 warn">4</div><div class="lbl">Lead time</div></div>
+        </div>
+      </div>
+      <div class="history-box">
+        <div class="history-head" onclick="this.nextElementSibling.classList.toggle('open')"><div class="history-title">Historial de la asignación</div><div class="history-toggle">Ver ▾</div></div>
+        <div class="history-log">
+          <div class="hist-row"><span class="hist-time">2026-01-02 09:00</span><span class="hist-action">Envió correo con documentos a Aduanimex</span><span class="hist-user">E. Torres</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ COSTEO Y CIERRE ============ -->
+    <div class="panel" id="panel-costeo">
+      <div class="trace-bar">
+        <span class="trace-lbl">Trazabilidad</span>
+        <span class="trace-pill" onclick="goTab('aduana')">DO M0301479MDE-BUN</span><span class="trace-arrow">→</span>
+        <span class="trace-pill current">Costeo y Cierre</span>
+      </div>
+      <div class="section">
+        <div class="toolbar" style="margin-bottom:6px"><div class="section-title" style="margin:0">Costeo — DO M0301479MDE-BUN</div><span class="badge warn">En cálculo</span></div>
+        <div class="prorrateo-toggle">
+          <div class="prorrateo-opt active">Por valor FOB</div><div class="prorrateo-opt">Por peso</div><div class="prorrateo-opt">Por volumen (CBM)</div>
+        </div>
+        <div class="alert-list">
+          <div class="alert-row on"><span class="ai">⚠</span> JLC-235NVFA y JLC-689NVNFIA (Midea, origen China, subpartida 8418.21): verificar resolución antidumping vigente del Ministerio de Comercio antes de liquidar — se registra aparte del arancel ordinario.</div>
+        </div>
+        <div class="table-card"><table>
+          <thead><tr><th>Referencia</th><th class="num">Cant.</th><th class="num">FOB unit.</th><th class="num">Prorrateo</th><th class="num">Arancel ordinario</th><th class="num">Derecho antidumping</th><th class="num">Costo unit. nacionalizado</th></tr></thead>
+          <tbody>
+            <tr><td>JLC-235NVFA</td><td class="num">612</td><td class="num">USD 98,00</td><td class="num">COP 45.920</td><td class="num">COP 39.200</td><td class="num">COP 62.720</td><td class="num">COP 322.400</td></tr>
+            <tr><td>JLC-325NVNFIA</td><td class="num">818</td><td class="num">USD 145,00</td><td class="num">COP 68.000</td><td class="num">COP 58.000</td><td class="num">COP 0</td><td class="num">COP 469.100</td></tr>
+          </tbody>
+        </table></div>
+        <div class="section-desc" style="margin-top:6px">JLC-325NVNFIA es Whirlpool (México, cubierto por acuerdo comercial vigente) — sin antidumping ni arancel preferencial reducido. JLC-235NVFA es Midea (China) — sujeto a verificación de antidumping.</div>
+        <div class="compare-grid">
+          <div class="compare-card"><div class="lbl">Estimado (a la PO)</div><div class="val">COP 1.062.000.000</div></div>
+          <div class="compare-card"><div class="lbl">Real (al cierre)</div><div class="val">COP 1.091.614.600</div></div>
+          <div class="compare-card"><div class="lbl">Diferencia</div><div class="val diff-warn">+2,8%</div></div>
+        </div>
+      </div>
+      <div class="close-box">
+        <div class="title">Cierre de la operación</div>
+        <ul class="close-checklist">
+          <li><span class="ok">✓</span>Factura comercial conciliada</li>
+          <li><span class="ok">✓</span>Contenedor con retiro total confirmado</li>
+          <li><span class="pending">⚠</span>Falta 1 soporte de gasto (factura de flete)</li>
+        </ul>
+        <button class="btn btn-disabled" disabled>Cerrar operación (falta 1 soporte)</button>
+      </div>
+      <div class="history-box">
+        <div class="history-head" onclick="this.nextElementSibling.classList.toggle('open')"><div class="history-title">Historial de costeo</div><div class="history-toggle">Ver ▾</div></div>
+        <div class="history-log">
+          <div class="hist-row"><span class="hist-time">2026-02-14 10:00</span><span class="hist-action">Calculó costeo con prorrateo por valor FOB</span><span class="hist-user">L. Ramírez</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ REPORTES ============ -->
+    <div class="panel" id="panel-reportes">
+      <div class="subtabs">
+        <div class="subtab active" data-sub="rep-log">Tiempos logísticos</div>
+        <div class="subtab" data-sub="rep-gest">Tiempos de gestión</div>
+        <div class="subtab" data-sub="rep-pag">Conciliación de pagos por PI</div>
+      </div>
+      <div class="subpanel active" id="sub-rep-log">
+        <div class="toolbar"><div class="kpi-grid" style="margin-bottom:0; flex:1">
+          <div class="kpi"><div class="lbl">DO en el rango</div><div class="val">18</div></div>
+          <div class="kpi"><div class="lbl">Lead time promedio</div><div class="val warn">7,2 días</div></div>
+          <div class="kpi"><div class="lbl">Con inspección física</div><div class="val danger">3</div></div>
+          <div class="kpi"><div class="lbl">Fechas sin registrar</div><div class="val warn">5</div></div>
+        </div></div>
+        <div class="btn-row" style="justify-content:flex-start; margin-bottom:10px"><button class="btn btn-export">⬇ Exportar Excel</button><button class="btn btn-export">⬇ Exportar PDF</button></div>
+        <div class="table-card"><table>
+          <thead><tr><th>Importador</th><th>DO</th><th>Naviera</th><th>Fecha liberación</th><th>Fecha retiro</th><th class="num">Lead time</th></tr></thead>
+          <tbody>
+            <tr><td>JL Y RB SAS</td><td>M0301479MDE-BUN</td><td>MEDITERRANEAN</td><td>2/01/2025</td><td>4/01/2025</td><td class="num"><span class="badge ok">4</span></td></tr>
+            <tr><td>JL Y RB SAS</td><td>M0301431MDE-BUN</td><td>EVERGREEN</td><td>9/01/2025</td><td>14/01/2025</td><td class="num"><span class="badge warn">10</span></td></tr>
+          </tbody>
+        </table></div>
+      </div>
+      <div class="subpanel" id="sub-rep-gest">
+        <div class="table-card" style="padding:18px">
+          <div class="section-title">PO-2026-0042 — ciclo de gestión interna</div>
+          <div class="funnel-row"><div>PO creada → enviada</div><div class="funnel-track"><div class="funnel-fill" style="width:15%"></div></div><div class="funnel-days">1 día</div></div>
+          <div class="funnel-row"><div>PO enviada → PI recibida</div><div class="funnel-track"><div class="funnel-fill" style="width:55%"></div></div><div class="funnel-days">7 días</div></div>
+          <div class="funnel-row"><div>Factura → asignación aduana</div><div class="funnel-track"><div class="funnel-fill" style="width:20%"></div></div><div class="funnel-days">2 días</div></div>
+        </div>
+      </div>
+      <div class="subpanel" id="sub-rep-pag">
+        <div class="table-card"><table>
+          <thead><tr><th>PI</th><th>Proveedor</th><th class="num">Valor total</th><th class="num">Pagado</th><th>Avance</th><th>Estado</th></tr></thead>
+          <tbody>
+            <tr><td>PI-REF-JLC-20260710</td><td>Midea Electric</td><td class="num">USD 420.000</td><td class="num">USD 420.000</td><td><div class="progress-bar"><div class="progress-fill" style="width:100%"></div></div>100%</td><td><span class="badge ok">Pagada</span></td></tr>
+            <tr><td>PI-REF-JLC-20260905</td><td>Midea Electric</td><td class="num">USD 250.000</td><td class="num">USD 0</td><td><div class="progress-bar"><div class="progress-fill warn" style="width:0%"></div></div>0%</td><td><span class="badge danger">Anticipo vencido</span></td></tr>
+          </tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <!-- ============ USUARIOS ============ -->
+    <div class="panel" id="panel-usuarios">
+      <div class="toolbar"><input class="search-input" placeholder="Buscar usuario o correo..."><button class="btn btn-primary">+ Nuevo usuario</button></div>
+      <div class="table-card"><table>
+        <thead><tr><th>Usuario</th><th>Correo</th><th>Área</th><th>Perfil</th><th>Estado</th><th>Acciones</th></tr></thead>
+        <tbody>
+          <tr><td>Juan Felipe López</td><td>jflopez@jlcelectronics.com</td><td>Dirección</td><td><span class="badge blue">Administrador</span></td><td><span class="badge ok">Activo</span></td><td><span class="icon-btn icon-edit">✎</span></td></tr>
+          <tr><td>María Camila Ortiz</td><td>mortiz@jlcelectronics.com</td><td>Compras</td><td><span class="badge gray">Compras</span></td><td><span class="badge ok">Activo</span></td><td><span class="icon-btn icon-edit">✎</span></td></tr>
+        </tbody>
+      </table></div>
+    </div>
+
+    <!-- ============ PERFILES Y PERMISOS ============ -->
+    <div class="panel" id="panel-perfiles">
+      <div class="role-grid">
+        <div class="role-card admin"><div class="role-head"><div class="role-name">Administrador</div><span class="icon-btn icon-edit">✎</span></div><div class="perm-tags"><span class="perm-tag full">Acceso total</span></div><div class="role-users">1 usuario</div></div>
+        <div class="role-card"><div class="role-head"><div class="role-name">Compras</div><span class="icon-btn icon-edit">✎</span></div><div class="perm-tags"><span class="perm-tag">Proveedores</span><span class="perm-tag">Productos</span><span class="perm-tag">PO</span></div><div class="role-users">3 usuarios</div></div>
+        <div class="role-card"><div class="role-head"><div class="role-name">Comercio Exterior</div><span class="icon-btn icon-edit">✎</span></div><div class="perm-tags"><span class="perm-tag">PI</span><span class="perm-tag">Licencias</span><span class="perm-tag">Aduana</span></div><div class="role-users">2 usuarios</div></div>
+        <div class="role-card"><div class="role-head"><div class="role-name">Cartera / Pagos</div><span class="icon-btn icon-edit">✎</span></div><div class="perm-tags"><span class="perm-tag">Pagos</span></div><div class="role-users">2 usuarios</div></div>
+        <div class="role-card"><div class="role-head"><div class="role-name">Bodega / Logística</div><span class="icon-btn icon-edit">✎</span></div><div class="perm-tags"><span class="perm-tag">Factura comercial</span></div><div class="role-users">2 usuarios</div></div>
+        <div class="role-card"><div class="role-head"><div class="role-name">Costeo</div><span class="icon-btn icon-edit">✎</span></div><div class="perm-tags"><span class="perm-tag">Costeo</span><span class="perm-tag">Cierre</span></div><div class="role-users">1 usuario</div></div>
+      </div>
+      <div class="matrix-card"><table>
+        <thead><tr><th>Módulo</th><th>Ver</th><th>Crear</th><th>Editar</th><th>Aprobar</th><th>Cerrar</th></tr></thead>
+        <tbody>
+          <tr><td class="row-module">Importadores</td><td><span class="chk"></span></td><td><span class="chk"></span></td><td><span class="chk"></span></td><td><span class="chk"></span></td><td><span class="chk"></span></td></tr>
+          <tr><td class="row-module">Proveedores</td><td><span class="chk on">✓</span></td><td><span class="chk on">✓</span></td><td><span class="chk on">✓</span></td><td><span class="chk on">✓</span></td><td><span class="chk"></span></td></tr>
+          <tr><td class="row-module">Productos</td><td><span class="chk on">✓</span></td><td><span class="chk on">✓</span></td><td><span class="chk on">✓</span></td><td><span class="chk"></span></td><td><span class="chk"></span></td></tr>
+          <tr><td class="row-module">Licencias RETIQ</td><td><span class="chk"></span></td><td><span class="chk"></span></td><td><span class="chk"></span></td><td><span class="chk"></span></td><td><span class="chk"></span></td></tr>
+          <tr><td class="row-module">Purchase Order</td><td><span class="chk on">✓</span></td><td><span class="chk on">✓</span></td><td><span class="chk"></span></td><td><span class="chk on">✓</span></td><td><span class="chk"></span></td></tr>
+          <tr><td class="row-module">Proforma Invoice</td><td><span class="chk"></span></td><td><span class="chk"></span></td><td><span class="chk"></span></td><td><span class="chk"></span></td><td><span class="chk"></span></td></tr>
+          <tr><td class="row-module">Pagos</td><td><span class="chk"></span></td><td><span class="chk"></span></td><td><span class="chk"></span></td><td><span class="chk"></span></td><td><span class="chk"></span></td></tr>
+          <tr><td class="row-module">Factura comercial</td><td><span class="chk"></span></td><td><span class="chk"></span></td><td><span class="chk"></span></td><td><span class="chk"></span></td><td><span class="chk"></span></td></tr>
+          <tr><td class="row-module">Aduana / documental</td><td><span class="chk on">✓</span></td><td><span class="chk on">✓</span></td><td><span class="chk on">✓</span></td><td><span class="chk"></span></td><td><span class="chk"></span></td></tr>
+          <tr><td class="row-module">Costeo / Cierre</td><td><span class="chk on">✓</span></td><td><span class="chk"></span></td><td><span class="chk"></span></td><td><span class="chk"></span></td><td><span class="chk"></span></td></tr>
+          <tr><td class="row-module">Reportes</td><td><span class="chk on">✓</span></td><td><span class="chk"></span></td><td><span class="chk"></span></td><td><span class="chk"></span></td><td><span class="chk"></span></td></tr>
+          <tr><td class="row-module">Administración</td><td><span class="chk"></span></td><td><span class="chk"></span></td><td><span class="chk"></span></td><td><span class="chk"></span></td><td><span class="chk"></span></td></tr>
+        </tbody>
+      </table></div>
+      <div class="section-desc" style="margin-top:10px">Vista de ejemplo del perfil "Comercio Exterior" — ahora las 12 filas cubren los 17 paneles del sidebar (Importadores y Administración quedan reservados solo a Administrador, por eso sin marcar).</div>
+    </div>
+
+    <!-- ============ MATRIZ AGENCIAS ADUANA ============ -->
+    <div class="panel" id="panel-mataduanas">
+      <div class="toolbar"><input class="search-input" placeholder="Buscar agencia..."><button class="btn btn-primary">+ Nueva agencia</button></div>
+      <div class="table-card"><table>
+        <thead><tr><th>Código</th><th>Razón social</th><th>Ciudad</th><th>SLA radicación</th><th>Nivel servicio</th><th>Estado</th></tr></thead>
+        <tbody>
+          <tr><td>ADU-001</td><td>Aduanimex S.A. Nivel 1</td><td>Buenaventura</td><td class="num">2 días</td><td><span class="badge ok">Alto</span></td><td><span class="badge ok">Activa</span></td></tr>
+          <tr><td>ADU-002</td><td>Aduanas del Pacífico Ltda.</td><td>Cartagena</td><td class="num">3 días</td><td><span class="badge warn">Medio</span></td><td><span class="badge ok">Activa</span></td></tr>
+        </tbody>
+      </table></div>
+    </div>
+
+    <!-- ============ MATRIZ TRANSPORTADORAS ============ -->
+    <div class="panel" id="panel-mattransp">
+      <div class="toolbar"><input class="search-input" placeholder="Buscar transportadora..."><button class="btn btn-primary">+ Nueva transportadora</button></div>
+      <div class="table-card"><table>
+        <thead><tr><th>Código</th><th>Razón social</th><th>Modo</th><th>Cobertura</th><th>Tarifa referencia</th><th>Estado</th></tr></thead>
+        <tbody>
+          <tr><td>TRA-001</td><td>Coordinadora Mercantil</td><td><span class="badge blue">Terrestre</span></td><td>Buenaventura → Bogotá/Medellín</td><td class="num">COP 2.100.000</td><td><span class="badge ok">Activa</span></td></tr>
+          <tr><td>TRA-002</td><td>TIBA Colombia S.A.S.</td><td><span class="badge blue">Agente marítimo</span></td><td>China → Buenaventura</td><td class="num">Según booking</td><td><span class="badge ok">Activa</span></td></tr>
+        </tbody>
+      </table></div>
+    </div>
+
+    <!-- ============ MATRIZ DE ESTADOS ============ -->
+    <div class="panel" id="panel-matestados">
+      <div class="toolbar"><div class="section-desc" style="margin:0">Editable solo por Administrador. No borra el histórico de operaciones que ya usaron un estado.</div><button class="btn btn-primary">+ Agregar estado</button></div>
+
+      <div class="phase-block">
+        <div class="phase-title">Purchase Order</div>
+        <div class="step-chain">
+          <div class="step-node"><div class="code">borrador</div><div class="label">Borrador</div><span class="actor">compras</span></div>
+          <div class="step-node"><div class="code">aprobada</div><div class="label">Aprobada</div><span class="actor">comercio_ext</span></div>
+          <div class="step-node"><div class="code">enviada</div><div class="label">Enviada</div><span class="actor">comercio_ext</span></div>
+          <div class="step-node"><div class="code">cerrada</div><div class="label">Cerrada</div><span class="actor">sistema</span></div>
+          <div class="step-node add-node">+ agregar</div>
+        </div>
+      </div>
+
+      <div class="phase-block">
+        <div class="phase-title">Proforma Invoice</div>
+        <div class="step-chain">
+          <div class="step-node"><div class="code">recibida</div><div class="label">Recibida</div><span class="actor">comercio_ext</span></div>
+          <div class="step-node"><div class="code">con_diferencias</div><div class="label">Con diferencias</div><span class="actor">comercio_ext</span></div>
+          <div class="step-node"><div class="code">conciliada</div><div class="label">Conciliada</div><span class="actor">comercio_ext</span></div>
+          <div class="step-node add-node">+ agregar</div>
+        </div>
+      </div>
+
+      <div class="phase-block">
+        <div class="phase-title">Factura Comercial</div>
+        <div class="step-chain">
+          <div class="step-node"><div class="code">cargada</div><div class="label">Cargada</div><span class="actor">bodega</span></div>
+          <div class="step-node"><div class="code">en_conciliacion</div><div class="label">En conciliación</div><span class="actor">bodega</span></div>
+          <div class="step-node"><div class="code">confirmada</div><div class="label">Confirmada</div><span class="actor">bodega</span></div>
+          <div class="step-node add-node">+ agregar</div>
+        </div>
+      </div>
+
+      <div class="phase-block">
+        <div class="phase-title">Aduana / Documental</div>
+        <div class="step-chain">
+          <div class="step-node"><div class="code">doc_enviada</div><div class="label">Documentos enviados</div><span class="actor">comercio_ext</span></div>
+          <div class="step-node"><div class="code">radicado</div><div class="label">Radicado en DIAN</div><span class="actor">agencia</span></div>
+          <div class="step-node"><div class="code">liberado</div><div class="label">Liberado</div><span class="actor">agencia</span></div>
+          <div class="step-node add-node">+ agregar</div>
+        </div>
+      </div>
+
+      <div class="phase-block">
+        <div class="phase-title">Licencias RETIQ</div>
+        <div class="step-chain">
+          <div class="step-node"><div class="code">en_tramite</div><div class="label">En trámite</div><span class="actor">comercio_ext</span></div>
+          <div class="step-node"><div class="code">en_certificador</div><div class="label">En ente certificador</div><span class="actor">certificador</span></div>
+          <div class="step-node"><div class="code">aprobada</div><div class="label">Aprobada</div><span class="actor">certificador</span></div>
+          <div class="step-node add-node">+ agregar</div>
+        </div>
+      </div>
+
+      <div class="phase-block">
+        <div class="phase-title">Costeo</div>
+        <div class="step-chain">
+          <div class="step-node"><div class="code">pend_soportes</div><div class="label">Pendiente soportes</div><span class="actor">costeo</span></div>
+          <div class="step-node"><div class="code">validado</div><div class="label">Validado</div><span class="actor">costeo</span></div>
+          <div class="step-node"><div class="code">cerrado</div><div class="label">Cerrado</div><span class="actor">costeo</span></div>
+          <div class="step-node add-node">+ agregar</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  const titles = {
+    importadores: ["Maestro de Importadores", "Empresas habilitadas para importar bajo la marca JLC Electronics"],
+    proveedores: ["Vinculación de Proveedores", "Registro, condiciones comerciales y documentos por proveedor"],
+    productos: ["Codificación de Productos", "Dimensiones, volumen automático, capacidad FCL y LCL"],
+    licencias: ["Licencias RETIQ", "Principal, sublicencia y cierre de certificación"],
+    po: ["Purchase Order", "Consecutivo, estados, ruta y resumen financiero"],
+    correopo: ["Correo de Envío de PO", "Plantilla generada automáticamente en inglés"],
+    pi: ["Proforma Invoice", "Extracción por IA y conciliación contra la PO"],
+    pagos: ["Registro de Pagos", "Módulo canónico — único punto de registro de anticipos y saldos"],
+    factura: ["Factura Comercial", "Conciliación por referencia, alertas y documentación del despacho"],
+    aduana: ["Asignación a Aduana y Envío Documental", "Seguimiento completo hasta el retiro del contenedor"],
+    costeo: ["Costeo y Cierre de Operación", "Nacionalización por referencia y cierre controlado"],
+    reportes: ["Reportes", "Tiempos logísticos, tiempos de gestión y conciliación de pagos"],
+    usuarios: ["Usuarios", "Cuentas del sistema y perfil asignado"],
+    perfiles: ["Perfiles y Permisos", "Qué puede hacer cada perfil, módulo por módulo"],
+    mataduanas: ["Matriz de Agencias de Aduana", "Registro de agencias habilitadas"],
+    mattransp: ["Matriz de Transportadoras", "Registro de transportadoras y agentes de carga"],
+    matestados: ["Matriz de Estados", "El flujo de cada módulo, editable sin tocar código"],
+  };
+
+  function goTab(tab){
+    document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    document.querySelector(`.nav-item[data-tab="${tab}"]`).classList.add('active');
+    document.getElementById('panel-' + tab).classList.add('active');
+    document.getElementById('pageTitle').textContent = titles[tab][0];
+    document.getElementById('pageSub').textContent = titles[tab][1];
+    window.scrollTo(0,0);
+    document.getElementById('sidebar').classList.remove('open');
+  }
+  document.querySelectorAll('.nav-item').forEach(item => item.addEventListener('click', () => goTab(item.dataset.tab)));
+
+  document.querySelectorAll('.subtab').forEach(st => {
+    st.addEventListener('click', () => {
+      const parent = st.closest('.panel');
+      parent.querySelectorAll('.subtab').forEach(s => s.classList.remove('active'));
+      parent.querySelectorAll('.subpanel').forEach(p => p.classList.remove('active'));
+      st.classList.add('active');
+      document.getElementById('sub-' + st.dataset.sub).classList.add('active');
+    });
+  });
+
+  document.getElementById('menuToggle').addEventListener('click', () => document.getElementById('sidebar').classList.add('open'));
+  document.getElementById('closeSidebar').addEventListener('click', () => document.getElementById('sidebar').classList.remove('open'));
+
+  const themeBtn = document.getElementById('themeToggle');
+  themeBtn.addEventListener('click', () => {
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    document.documentElement.setAttribute('data-theme', isDark ? 'light' : 'dark');
+    themeBtn.textContent = isDark ? '🌙 Oscuro' : '☀ Claro';
+  });
+
+  function toggleRelacion(){
+    const tipo = document.getElementById('relTipo').value;
+    document.getElementById('relPiRow').style.display = tipo === 'pi' ? 'grid' : 'none';
+  }
+
+  function checkAllocation(){
+    // Validación ilustrativa: en la versión real, suma cada "Cant. de este pago" x
+    // valor unitario y la compara contra el total negociado del encabezado.
+    // Si no cuadra, el botón "Registrar pago" permanece deshabilitado.
+  }
+
+  function setTipoTramite(tipo){
+    document.getElementById('tipoPrincipalBtn').classList.toggle('active', tipo === 'principal');
+    document.getElementById('tipoSubBtn').classList.toggle('active', tipo === 'sublicencia');
+    document.getElementById('docsPrincipal').style.display = tipo === 'principal' ? 'block' : 'none';
+    document.getElementById('docsSublicencia').style.display = tipo === 'sublicencia' ? 'block' : 'none';
+  }
+</script>
+</body>
+</html>
