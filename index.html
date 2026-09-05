@@ -278,33 +278,169 @@
 
     <!-- ============ IMPORTADORES ============ -->
     <div class="panel active" id="panel-importadores">
-      <div class="toolbar"><input class="search-input" placeholder="Buscar razón social o NIT..."><div style="display:flex; gap:8px"><button class="btn btn-export">⬇ Exportar</button><button class="btn btn-primary">+ Nuevo importador</button></div></div>
+      <div class="toolbar">
+        <input class="search-input" id="impSearch" placeholder="Buscar razón social o NIT..." oninput="renderImportadores()">
+        <div style="display:flex; gap:8px"><button class="btn btn-export">⬇ Exportar</button><button class="btn btn-primary" onclick="openImportadorForm()">+ Nuevo importador</button></div>
+      </div>
       <div class="table-card"><table>
         <thead><tr><th>Código</th><th>Razón social</th><th>NIT</th><th>Ciudad</th><th>Agencia habitual</th><th>Estado</th><th>Acciones</th></tr></thead>
-        <tbody>
-          <tr><td>IMP-001</td><td>JL Y RB SAS</td><td>900.738.718-1</td><td>Bogotá</td><td>Aduanimex S.A. Nivel 1</td><td><span class="badge ok">Activo</span></td><td><span class="icon-btn icon-view">⊕</span><span class="icon-btn icon-edit">✎</span></td></tr>
-          <tr><td>IMP-002</td><td>FRATELLI COLOMBIA SAS</td><td>901.225.430-3</td><td>Medellín</td><td>Aduanimex S.A. Nivel 1</td><td><span class="badge ok">Activo</span></td><td><span class="icon-btn icon-view">⊕</span><span class="icon-btn icon-edit">✎</span></td></tr>
-        </tbody>
+        <tbody id="impTableBody"></tbody>
       </table></div>
-      <div class="section">
-        <div class="section-title">Ficha — JL Y RB SAS</div>
-        <div class="field-row">
-          <div class="field"><label>Razón social</label><input value="JL Y RB SAS"></div>
-          <div class="field"><label>NIT</label><input value="900.738.718-1"></div>
-          <div class="field"><label>Depósito / bodega autorizada</label><input value="TCBUEN Buenaventura"></div>
+
+      <div class="section" id="impFormSection" style="display:none">
+        <div class="section-title" id="impFormTitle">Nuevo importador</div>
+        <div class="alert-list" id="impFormError" style="display:none">
+          <div class="alert-row on"><span class="ai">⚠</span> Razón social y NIT son obligatorios.</div>
         </div>
-        <div class="btn-row"><button class="btn btn-ghost">Cancelar</button><button class="btn btn-primary">Guardar</button></div>
+        <div class="field-row">
+          <div class="field"><label>Razón social *</label><input id="impRazonSocial"></div>
+          <div class="field"><label>NIT *</label><input id="impNit"></div>
+          <div class="field"><label>Ciudad</label><input id="impCiudad"></div>
+          <div class="field"><label>Agencia de aduanas habitual</label><input id="impAgencia" value="Aduanimex S.A. Nivel 1"></div>
+          <div class="field"><label>Depósito / bodega autorizada</label><input id="impBodega" value="TCBUEN Buenaventura"></div>
+          <div class="field"><label>Estado</label><select id="impEstado"><option>Activo</option><option>Inactivo</option><option>Bloqueado</option></select></div>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-ghost" onclick="closeImportadorForm()">Cancelar</button>
+          <button class="btn btn-primary" id="impSaveBtn" onclick="saveImportador()">Guardar</button>
+        </div>
       </div>
-      <div class="history-box">
+
+      <div class="history-box" id="impHistoryBox" style="display:none">
         <div class="history-head" onclick="this.nextElementSibling.classList.toggle('open')">
           <div class="history-title">Historial de modificaciones</div><div class="history-toggle">Ver ▾</div>
         </div>
-        <div class="history-log">
-          <div class="hist-row"><span class="hist-time">2026-01-02 09:14</span><span class="hist-action">Actualizó agencia de aduanas habitual</span><span class="hist-user">J. F. López</span></div>
-          <div class="hist-row"><span class="hist-time">2025-11-18 14:02</span><span class="hist-action">Creó el registro del importador</span><span class="hist-user">J. F. López</span></div>
-        </div>
+        <div class="history-log" id="impHistoryLog"></div>
       </div>
     </div>
+
+    <script>
+      let importadores = [
+        { codigo:'IMP-001', razonSocial:'JL Y RB SAS', nit:'900.738.718-1', ciudad:'Bogotá', agencia:'Aduanimex S.A. Nivel 1', bodega:'TCBUEN Buenaventura', estado:'Activo',
+          historial:[
+            {fecha:'2026-01-02 09:14', accion:'Actualizó agencia de aduanas habitual', usuario:'J. F. López'},
+            {fecha:'2025-11-18 14:02', accion:'Creó el registro del importador', usuario:'J. F. López'},
+          ]},
+        { codigo:'IMP-002', razonSocial:'FRATELLI COLOMBIA SAS', nit:'901.225.430-3', ciudad:'Medellín', agencia:'Aduanimex S.A. Nivel 1', bodega:'', estado:'Activo',
+          historial:[{fecha:'2025-10-02 11:00', accion:'Creó el registro del importador', usuario:'J. F. López'}] },
+      ];
+      let impEditingCodigo = null;
+
+      function badgeClassEstado(estado){
+        if (estado === 'Activo') return 'ok';
+        if (estado === 'Inactivo') return 'gray';
+        return 'danger';
+      }
+
+      function renderImportadores(){
+        const term = (document.getElementById('impSearch').value || '').toLowerCase();
+        const tbody = document.getElementById('impTableBody');
+        const filtered = importadores.filter(i =>
+          i.razonSocial.toLowerCase().includes(term) || i.nit.toLowerCase().includes(term)
+        );
+        tbody.innerHTML = filtered.map(i => `
+          <tr>
+            <td>${i.codigo}</td><td>${i.razonSocial}</td><td>${i.nit}</td><td>${i.ciudad || '—'}</td>
+            <td>${i.agencia || '—'}</td><td><span class="badge ${badgeClassEstado(i.estado)}">${i.estado}</span></td>
+            <td>
+              <span class="icon-btn icon-view" onclick="viewImportador('${i.codigo}')">⊕</span>
+              <span class="icon-btn icon-edit" onclick="editImportador('${i.codigo}')">✎</span>
+            </td>
+          </tr>
+        `).join('') || '<tr><td colspan="7" style="text-align:center; color:var(--text-faint)">Sin resultados</td></tr>';
+      }
+
+      function openImportadorForm(){
+        impEditingCodigo = null;
+        document.getElementById('impFormTitle').textContent = 'Nuevo importador';
+        document.getElementById('impRazonSocial').value = '';
+        document.getElementById('impNit').value = '';
+        document.getElementById('impCiudad').value = '';
+        document.getElementById('impAgencia').value = 'Aduanimex S.A. Nivel 1';
+        document.getElementById('impBodega').value = 'TCBUEN Buenaventura';
+        document.getElementById('impEstado').value = 'Activo';
+        document.getElementById('impFormError').style.display = 'none';
+        document.getElementById('impSaveBtn').disabled = false;
+        document.getElementById('impSaveBtn').classList.remove('btn-disabled');
+        document.getElementById('impFormSection').style.display = 'block';
+        document.getElementById('impHistoryBox').style.display = 'none';
+        document.getElementById('impRazonSocial').focus();
+      }
+
+      function closeImportadorForm(){
+        document.getElementById('impFormSection').style.display = 'none';
+      }
+
+      function saveImportador(){
+        const razonSocial = document.getElementById('impRazonSocial').value.trim();
+        const nit = document.getElementById('impNit').value.trim();
+        if (!razonSocial || !nit){
+          document.getElementById('impFormError').style.display = 'block';
+          return;
+        }
+        const data = {
+          razonSocial, nit,
+          ciudad: document.getElementById('impCiudad').value.trim(),
+          agencia: document.getElementById('impAgencia').value.trim(),
+          bodega: document.getElementById('impBodega').value.trim(),
+          estado: document.getElementById('impEstado').value,
+        };
+        const now = new Date().toISOString().slice(0,16).replace('T',' ');
+
+        if (impEditingCodigo){
+          const idx = importadores.findIndex(i => i.codigo === impEditingCodigo);
+          importadores[idx] = { ...importadores[idx], ...data };
+          importadores[idx].historial.unshift({fecha: now, accion:'Editó los datos del importador', usuario:'Juan Felipe López'});
+        } else {
+          const nextNum = importadores.length + 1;
+          const codigo = 'IMP-' + String(nextNum).padStart(3,'0');
+          importadores.push({ codigo, ...data, historial:[{fecha: now, accion:'Creó el registro del importador', usuario:'Juan Felipe López'}] });
+        }
+        renderImportadores();
+        closeImportadorForm();
+      }
+
+      function fillFormFromImportador(i){
+        impEditingCodigo = i.codigo;
+        document.getElementById('impFormTitle').textContent = 'Editar — ' + i.razonSocial;
+        document.getElementById('impRazonSocial').value = i.razonSocial;
+        document.getElementById('impNit').value = i.nit;
+        document.getElementById('impCiudad').value = i.ciudad || '';
+        document.getElementById('impAgencia').value = i.agencia || '';
+        document.getElementById('impBodega').value = i.bodega || '';
+        document.getElementById('impEstado').value = i.estado;
+        document.getElementById('impFormError').style.display = 'none';
+        document.getElementById('impFormSection').style.display = 'block';
+      }
+
+      function editImportador(codigo){
+        const i = importadores.find(x => x.codigo === codigo);
+        if (!i) return;
+        fillFormFromImportador(i);
+        document.getElementById('impSaveBtn').disabled = false;
+        document.getElementById('impSaveBtn').classList.remove('btn-disabled');
+        renderImportadorHistory(i);
+      }
+
+      function viewImportador(codigo){
+        const i = importadores.find(x => x.codigo === codigo);
+        if (!i) return;
+        fillFormFromImportador(i);
+        document.getElementById('impFormTitle').textContent = 'Ver — ' + i.razonSocial + ' (solo lectura)';
+        document.getElementById('impSaveBtn').disabled = true;
+        document.getElementById('impSaveBtn').classList.add('btn-disabled');
+        renderImportadorHistory(i);
+      }
+
+      function renderImportadorHistory(i){
+        document.getElementById('impHistoryBox').style.display = 'block';
+        document.getElementById('impHistoryLog').innerHTML = i.historial.map(h => `
+          <div class="hist-row"><span class="hist-time">${h.fecha}</span><span class="hist-action">${h.accion}</span><span class="hist-user">${h.usuario}</span></div>
+        `).join('');
+      }
+
+      renderImportadores();
+    </script>
 
     <!-- ============ PROVEEDORES ============ -->
     <div class="panel" id="panel-proveedores">
