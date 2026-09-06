@@ -161,6 +161,36 @@
   .funnel-fill{ height:100%; background:var(--blue); border-radius:6px; }
   .funnel-days{ font-family:'IBM Plex Mono',monospace; font-size:11.5px; text-align:right; font-weight:700; }
 
+  /* Input con sufijo de unidad (kg, cm, m³) */
+  .unit-input{ position:relative; display:flex; align-items:center; }
+  .unit-input input{ width:100%; padding-right:38px !important; }
+  .unit-suffix{ position:absolute; right:11px; font-size:11px; font-weight:600; color:var(--text-faint); pointer-events:none; }
+
+  /* Tarjetas de modalidad LCL / FCL */
+  .mode-grid{ display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:14px; }
+  @media (max-width:700px){ .mode-grid{ grid-template-columns:1fr; } }
+  .mode-card{ border:1.5px solid var(--line); border-radius:9px; padding:14px; cursor:pointer; background:var(--input-bg); transition:border-color .12s, background .12s; }
+  .mode-card strong{ display:block; font-size:14px; color:var(--text-dim); margin-bottom:5px; }
+  .mode-card span{ font-size:11.5px; color:var(--text-faint); line-height:1.45; }
+  .mode-card.active{ border-color:var(--blue); background:var(--blue-soft); }
+  .mode-card.active strong{ color:var(--blue); }
+  .mode-card.active span{ color:var(--text-dim); }
+
+  /* Input de unidades por contenedor dentro de la tabla */
+  .cap-input{ width:110px; border:1px solid var(--line); border-radius:6px; padding:7px 10px; font-size:12.5px; background:var(--card); color:var(--text); font-family:'IBM Plex Mono',monospace; text-align:right; }
+  .cap-input:focus{ outline:none; border-color:var(--blue); }
+
+  /* Licencias: textarea, panel de contactos, footer de progreso */
+  .lic-textarea{ width:100%; min-height:80px; border:1px solid var(--line); border-radius:7px; padding:10px 11px; font-size:12.5px; background:var(--input-bg); color:var(--text); font-family:'Inter',sans-serif; resize:vertical; margin-bottom:14px; }
+  .lic-textarea:focus{ outline:none; border-color:var(--blue); }
+  .contact-panel{ background:var(--input-bg); border:1px solid var(--line); border-radius:8px; padding:12px 14px; min-height:60px; }
+  .contact-panel strong{ font-size:12.5px; color:var(--text); }
+  .contact-panel p{ font-size:11.5px; color:var(--text-faint); margin-top:4px; line-height:1.45; }
+  .contact-item{ font-size:11.8px; color:var(--text); padding:5px 0; border-bottom:1px solid var(--line); }
+  .contact-item:last-child{ border-bottom:none; }
+  .contact-item span{ color:var(--text-dim); font-size:11px; }
+  .lic-footer{ display:flex; gap:18px; align-items:flex-end; flex-wrap:wrap; background:var(--input-bg); border:1px solid var(--line); border-radius:9px; padding:14px 16px; margin-bottom:8px; }
+
   .prorrateo-toggle{ display:flex; gap:8px; margin-bottom:14px; }
   .prorrateo-opt{ font-size:11.5px; font-weight:600; padding:7px 14px; border-radius:20px; border:1.5px solid var(--line); color:var(--text-dim); cursor:pointer; }
   .prorrateo-opt.active{ background:var(--navy); color:#fff; border-color:var(--navy); }
@@ -237,7 +267,7 @@
   <div class="nav-item active" data-tab="importadores"><span class="nav-dot"></span>Importadores</div>
   <div class="nav-item" data-tab="proveedores"><span class="nav-dot"></span>Proveedores</div>
   <div class="nav-item" data-tab="productos"><span class="nav-dot"></span>Productos</div>
-  <div class="nav-item" data-tab="licencias"><span class="nav-dot"></span>Licencias RETIQ</div>
+  <div class="nav-item" data-tab="licencias"><span class="nav-dot"></span>Licencias</div>
 
   <div class="nav-group-title">Compras</div>
   <div class="nav-item" data-tab="po"><span class="nav-dot"></span>Purchase Order</div>
@@ -259,6 +289,8 @@
   <div class="nav-item" data-tab="usuarios"><span class="nav-dot"></span>Usuarios</div>
   <div class="nav-item" data-tab="perfiles"><span class="nav-dot"></span>Perfiles y Permisos</div>
   <div class="nav-item" data-tab="mataduanas"><span class="nav-dot"></span>Matriz Agencias Aduana</div>
+  <div class="nav-item" data-tab="matentes"><span class="nav-dot"></span>Matriz Entes Certificadores</div>
+  <div class="nav-item" data-tab="matprocesos"><span class="nav-dot"></span>Matriz Procesos Licencia</div>
   <div class="nav-item" data-tab="mattransp"><span class="nav-dot"></span>Matriz Transportadoras</div>
   <div class="nav-item" data-tab="matestados"><span class="nav-dot"></span>Matriz de Estados</div>
 </div>
@@ -286,6 +318,26 @@
     <script>
       // Fuente única de agencias de aduana — la usan tanto Importadores
       // (selección múltiple) como la Matriz de Agencias de Aduana.
+      // Fuente única de entes certificadores — la usan Licencias (envío de
+      // aplicación/renovación) y la Matriz de Entes Certificadores.
+      let entesCertificadores = [
+        { codigo:'ENT-001', nombre:'DEKRA', nit:'830.025.412-1', tiposCertificacion:'RETIQ, RETIE', estado:'Activo',
+          contactos:[
+            {nombre:'Andrés Gómez', cargo:'Líder de certificación', correo:'andres.gomez@dekra.com', tel:'+57 601 742 1188'},
+            {nombre:'Trámites DEKRA', cargo:'Radicación', correo:'tramites.co@dekra.com', tel:'+57 601 742 1100'},
+          ]},
+        { codigo:'ENT-002', nombre:'SGS Colombia', nit:'860.005.100-3', tiposCertificacion:'RETIQ', estado:'Activo',
+          contactos:[{nombre:'Paula Restrepo', cargo:'Coordinadora RETIQ', correo:'paula.restrepo@sgs.com', tel:'+57 601 606 9292'}] },
+        { codigo:'ENT-003', nombre:'Bureau Veritas', nit:'860.006.220-7', tiposCertificacion:'RETIQ, producto', estado:'Activo',
+          contactos:[{nombre:'Marcela Díaz', cargo:'Certificación producto', correo:'marcela.diaz@bureauveritas.com', tel:'+57 601 380 4747'}] },
+        { codigo:'ENT-004', nombre:'Intertek', nit:'900.114.556-2', tiposCertificacion:'RETIQ', estado:'Activo',
+          contactos:[{nombre:'Carlos Vera', cargo:'Product Certification', correo:'carlos.vera@intertek.com', tel:'+57 601 748 5566'}] },
+      ];
+      function enteNombre(codigo){
+        const e = entesCertificadores.find(x => x.codigo === codigo);
+        return e ? e.nombre : '—';
+      }
+
       let agenciasAduana = [
         { codigo:'ADU-001', razonSocial:'Aduanimex S.A. Nivel 1', nit:'800.112.334-2', ciudad:'Buenaventura', sla:'2 días', nivelServicio:'Alto', estado:'Activa',
           contactos:[
@@ -306,9 +358,9 @@
       // ---- Permisos por rol (misma matriz que Administración > Perfiles y Permisos) ----
       let currentUserRole = 'Administrador';
       let permisos = {
-        'Administrador': { proveedores:{ver:true, crear:true, editar:true, aprobar:true, cerrar:true} },
-        'Compras': { proveedores:{ver:true, crear:true, editar:true, aprobar:true, cerrar:false} },
-        'Solo lectura': { proveedores:{ver:true, crear:false, editar:false, aprobar:false, cerrar:false} },
+        'Administrador': { proveedores:{ver:true, crear:true, editar:true, aprobar:true, cerrar:true}, productos:{ver:true, crear:true, editar:true, aprobar:true, cerrar:true}, licencias:{ver:true, crear:true, editar:true, aprobar:true, cerrar:true} },
+        'Compras': { proveedores:{ver:true, crear:true, editar:true, aprobar:true, cerrar:false}, productos:{ver:true, crear:true, editar:true, aprobar:false, cerrar:false}, licencias:{ver:true, crear:false, editar:false, aprobar:false, cerrar:false} },
+        'Solo lectura': { proveedores:{ver:true, crear:false, editar:false, aprobar:false, cerrar:false}, productos:{ver:true, crear:false, editar:false, aprobar:false, cerrar:false}, licencias:{ver:true, crear:false, editar:false, aprobar:false, cerrar:false} },
       };
       function hasPermiso(modulo, accion){
         const rol = permisos[currentUserRole];
@@ -318,6 +370,8 @@
         currentUserRole = rol;
         document.getElementById('userChip').textContent = 'Juan Felipe López · ' + rol;
         renderProveedores();
+        renderProductos();
+        renderLicencias();
       }
     </script>
 
@@ -1295,153 +1349,1083 @@
 
     <!-- ============ PRODUCTOS ============ -->
     <div class="panel" id="panel-productos">
-      <div class="toolbar"><input class="search-input" placeholder="Buscar referencia..."><div style="display:flex; gap:8px"><button class="btn btn-export">⬇ Exportar</button><button class="btn btn-primary">+ Codificar producto</button></div></div>
-      <div class="table-card"><table>
-        <thead><tr><th>Referencia JLC</th><th>Nombre</th><th>Proveedor</th><th>Modalidad</th><th>M³ / unidad</th><th>Estado</th></tr></thead>
-        <tbody>
-          <tr><td>JLC-235NVFA</td><td>Nevera 235L No Frost</td><td>Midea Electric</td><td><span class="badge blue">FCL</span></td><td class="num">0,780</td><td><span class="badge ok">Activo</span></td></tr>
-          <tr><td>JLC-235NVFA-B</td><td>Balay 12kg Lavadora</td><td>Whirlpool</td><td><span class="badge gray">LCL</span></td><td class="num">0,410</td><td><span class="badge ok">Activo</span></td></tr>
-        </tbody>
-      </table></div>
-      <div class="section">
-        <div class="section-title">Ficha — JLC-235NVFA (modalidad FCL)</div>
-        <div class="field-row">
-          <div class="field"><label>Largo (m)</label><input value="0.68"></div>
-          <div class="field"><label>Ancho (m)</label><input value="0.60"></div>
-          <div class="field"><label>Alto (m)</label><input value="1.55"></div>
-          <div class="field"><label>Volumen por unidad (m³, auto)</label><input value="0.632" disabled></div>
-          <div class="field"><label>Peso bruto/unidad</label><input value="62 kg"></div>
-          <div class="field"><label>Modalidad habitual</label><select><option>FCL</option><option>LCL</option></select></div>
-        </div>
-        <div class="section-desc">Capacidad por tipo de contenedor:</div>
-        <div class="table-card"><table>
-          <thead><tr><th>Contenedor</th><th class="num">Unidades</th><th class="num">M³ estimados</th><th class="num">Peso neto est.</th></tr></thead>
-          <tbody>
-            <tr><td>20 STD</td><td class="num">180</td><td class="num">28.4</td><td class="num">11.160 kg</td></tr>
-            <tr><td>40 STD</td><td class="num">380</td><td class="num">59.8</td><td class="num">23.560 kg</td></tr>
-            <tr><td>40 HQ</td><td class="num">420</td><td class="num">66.1</td><td class="num">26.040 kg</td></tr>
-          </tbody>
-        </table></div>
-      </div>
-      <div class="section">
-        <div class="section-title">Ficha — JLC-235NVFA-B (modalidad LCL)</div>
-        <div class="section-desc">Campos propios de carga suelta — no aplican los de capacidad por contenedor.</div>
-        <div class="field-row">
-          <div class="field"><label>Cantidad estimada por embarque</label><input value="120 unidades"></div>
-          <div class="field"><label>Volumen total</label><input value="49.2 m³"></div>
-          <div class="field"><label>Peso total</label><input value="4.920 kg"></div>
-          <div class="field"><label>Tipo de embalaje</label><select><option>Caja máster</option><option>Pallet</option><option>Caja individual</option></select></div>
+      <div class="toolbar">
+        <input class="search-input" id="prodSearch" placeholder="Buscar referencia o nombre..." oninput="renderProductos()">
+        <div style="display:flex; gap:8px">
+          <button class="btn btn-export">⬇ Exportar</button>
+          <button class="btn btn-primary" id="btnCodificarProducto" onclick="openProductoForm()">+ Codificar producto</button>
         </div>
       </div>
-    </div>
-
-    <!-- ============ LICENCIAS RETIQ ============ -->
-    <div class="panel" id="panel-licencias">
-      <div class="toolbar"><input class="search-input" placeholder="Buscar por referencia o número de licencia..."><div style="display:flex; gap:8px"><button class="btn btn-export">⬇ Exportar</button><button class="btn btn-primary">+ Nuevo trámite</button></div></div>
       <div class="table-card"><table>
-        <thead><tr><th>Tipo</th><th>Referencia</th><th>N° licencia</th><th>Ente certificador</th><th>Vigencia</th><th>Estado</th></tr></thead>
-        <tbody>
-          <tr><td><span class="badge blue">Sublicencia</span></td><td>JLC-235NVFA</td><td>RQ-2025-8841</td><td>DEKRA</td><td>hasta 22/09/2027</td><td><span class="badge ok">Vigente</span></td></tr>
-          <tr><td><span class="badge blue">Principal</span></td><td>JLC-689NVNFIA</td><td>RQ-2026-0117</td><td>DEKRA</td><td>En trámite</td><td><span class="badge warn">En proceso</span></td></tr>
-        </tbody>
+        <thead><tr><th>Referencia</th><th>Nombre</th><th>Línea</th><th>Proveedor</th><th>Modalidad</th><th class="num">Peso unit.</th><th class="num">Volumen unit.</th><th>Estado</th><th>Acciones</th></tr></thead>
+        <tbody id="prodTableBody"></tbody>
       </table></div>
 
-      <div class="section">
-        <div class="section-title">Nuevo trámite — RQ-2026-0117</div>
-
-        <div class="section-desc" style="font-size:12.5px; font-weight:700; color:var(--text)">Tipo de trámite <span style="font-weight:400; color:var(--text-dim)">— los requisitos cambian automáticamente</span></div>
-        <div class="prorrateo-toggle">
-          <div class="prorrateo-opt active" id="tipoPrincipalBtn" onclick="setTipoTramite('principal')">Licencia principal <span style="font-weight:400; opacity:0.8">— a nombre de JLC</span></div>
-          <div class="prorrateo-opt" id="tipoSubBtn" onclick="setTipoTramite('sublicencia')">Sublicencia <span style="font-weight:400; opacity:0.8">— basada en la del fabricante</span></div>
-        </div>
-
-        <div class="section-title" style="font-size:12.5px">Información de la licencia <span style="font-weight:400; color:var(--text-faint)">— campo obligatorio marcado con *</span></div>
-        <div class="field-row">
-          <div class="field"><label>Descripción *</label><input placeholder="RETIQ — refrigerador No Frost 689L"></div>
-          <div class="field"><label>Producto *</label><input value="JLC-689NVNFIA"></div>
-          <div class="field"><label>Referencia / Modelo *</label><input value="JLC-689NVNFIA"></div>
-          <div class="field"><label>Proveedor / Fabricante *</label><input value="Midea Electric"></div>
-          <div class="field"><label>Número de licencia</label><input value="RQ-2026-0117"></div>
-          <div class="field"><label>Propietario *</label><select><option>JLC Electronics</option><option>Fabricante</option></select></div>
-          <div class="field"><label>Fecha de inicio *</label><input type="date"></div>
-          <div class="field"><label>Fecha de vencimiento / vigencia *</label><input type="date"></div>
-        </div>
-
-        <!-- Documentos — LICENCIA PRINCIPAL -->
-        <div id="docsPrincipal">
-          <div class="toolbar" style="margin-bottom:6px"><div class="section-title" style="margin:0; font-size:12.5px">Documentos para licencia principal</div><span class="badge warn">3 de 10 cargados</span></div>
-          <div class="doc-list">
-            <div class="doc-row"><div class="doc-check on">✓</div><div><div class="doc-name">ISO 9001 actualizado</div></div><span class="badge ok">Cargado</span><span class="doc-action">Ver</span></div>
-            <div class="doc-row"><div class="doc-check on">✓</div><div><div class="doc-name">Test Report de fábrica</div></div><span class="badge ok">Cargado</span><span class="doc-action">Ver</span></div>
-            <div class="doc-row"><div class="doc-check on">✓</div><div><div class="doc-name">Flujo del proceso de ensamble</div></div><span class="badge ok">Cargado</span><span class="doc-action">Ver</span></div>
-            <div class="doc-row"><div class="doc-check"></div><div><div class="doc-name">Componentes críticos</div></div><span class="badge warn">Pendiente</span><span class="doc-action">Cargar</span></div>
-            <div class="doc-row"><div class="doc-check"></div><div><div class="doc-name">Registro de producción</div></div><span class="badge warn">Pendiente</span><span class="doc-action">Cargar</span></div>
-            <div class="doc-row"><div class="doc-check"></div><div><div class="doc-name">Declaración del material de la etiqueta</div><div class="doc-req">Papel mín. 75 g/m² o plástico mín. 45 g/m², carta con logo JLC</div></div><span class="badge warn">Pendiente</span><span class="doc-action">Cargar</span></div>
-            <div class="doc-row"><div class="doc-check"></div><div><div class="doc-name">Manual de usuario JLC</div></div><span class="badge warn">Pendiente</span><span class="doc-action">Cargar</span></div>
-            <div class="doc-row"><div class="doc-check"></div><div><div class="doc-name">Rating label</div></div><span class="badge warn">Pendiente</span><span class="doc-action">Cargar</span></div>
-            <div class="doc-row"><div class="doc-check"></div><div><div class="doc-name">Diseño de caja</div></div><span class="badge warn">Pendiente</span><span class="doc-action">Cargar</span></div>
-            <div class="doc-row"><div class="doc-check"></div><div><div class="doc-name">Material POP</div></div><span class="badge warn">Pendiente</span><span class="doc-action">Cargar</span></div>
-            <div class="doc-row"><div class="doc-check"></div><div><div class="doc-name">Diseño de etiqueta RETIQ</div></div><span class="badge warn">Pendiente</span><span class="doc-action">Cargar</span></div>
-            <div class="doc-row"><div class="doc-check"></div><div><div class="doc-name">Fotografías HD del producto</div></div><span class="badge warn">Pendiente</span><span class="doc-action">Cargar</span></div>
-          </div>
-        </div>
-
-        <!-- Documentos — SUBLICENCIA -->
-        <div id="docsSublicencia" style="display:none">
-          <div class="toolbar" style="margin-bottom:6px"><div class="section-title" style="margin:0; font-size:12.5px">Documentos para sublicencia</div><span class="badge warn">0 de 8 cargados</span></div>
-          <div class="section-desc">La sublicencia se apoya en la certificación que ya tiene el fabricante — por eso no pide ISO 9001, flujo de ensamble ni registro de producción; en cambio exige la prueba de esa licencia principal ya existente.</div>
-          <div class="doc-list">
-            <div class="doc-row"><div class="doc-check"></div><div><div class="doc-name">Etiqueta RETIQ principal del fabricante</div></div><span class="badge warn">Pendiente</span><span class="doc-action">Cargar</span></div>
-            <div class="doc-row"><div class="doc-check"></div><div><div class="doc-name">Licencia principal del fabricante</div><div class="doc-req">La certificación original que la sublicencia hereda</div></div><span class="badge warn">Pendiente</span><span class="doc-action">Cargar</span></div>
-            <div class="doc-row"><div class="doc-check"></div><div><div class="doc-name">Test Report</div></div><span class="badge warn">Pendiente</span><span class="doc-action">Cargar</span></div>
-            <div class="doc-row"><div class="doc-check"></div><div><div class="doc-name">Rating label JLC</div></div><span class="badge warn">Pendiente</span><span class="doc-action">Cargar</span></div>
-            <div class="doc-row"><div class="doc-check"></div><div><div class="doc-name">Manual de usuario JLC</div></div><span class="badge warn">Pendiente</span><span class="doc-action">Cargar</span></div>
-            <div class="doc-row"><div class="doc-check"></div><div><div class="doc-name">Material POP JLC</div></div><span class="badge warn">Pendiente</span><span class="doc-action">Cargar</span></div>
-            <div class="doc-row"><div class="doc-check"></div><div><div class="doc-name">Etiqueta RETIQ JLC</div></div><span class="badge warn">Pendiente</span><span class="doc-action">Cargar</span></div>
-            <div class="doc-row"><div class="doc-check"></div><div><div class="doc-name">Diseño de caja</div></div><span class="badge warn">Pendiente</span><span class="doc-action">Cargar</span></div>
-          </div>
-        </div>
-
-        <div class="section-title" style="font-size:12.5px">Ente certificador y destinatarios <span style="font-weight:400; color:var(--text-faint)">— contactos tomados de Configuración</span></div>
-        <div class="field-row">
-          <div class="field"><label>Ente certificador</label><select><option>Seleccionar...</option><option>SGS Colombia</option><option selected>DEKRA</option><option>Bureau Veritas</option><option>Intertek</option><option>Otro configurado</option></select></div>
-          <div class="field"><label>Destinatarios del correo</label><select><option>Sin destinatarios seleccionados</option><option>Contacto DEKRA — trámites@dekra.com.co</option></select></div>
-        </div>
-
-        <div class="field"><label>Observaciones del trámite</label><input placeholder="Información que se incluirá en el correo"></div>
-
-        <div class="toolbar" style="margin-top:14px">
+      <div class="section" id="prodFormSection" style="display:none">
+        <div class="toolbar" style="margin-bottom:10px">
           <div>
-            <div class="section-title" style="font-size:12.5px; margin-bottom:2px">Completitud del expediente</div>
-            <div class="progress-bar" style="width:140px"><div class="progress-fill warn" style="width:55%"></div></div>
-            <span style="font-size:11.5px; color:var(--text-dim)">Complete los campos obligatorios y cargue todos los documentos.</span>
+            <div class="section-title" style="margin:0" id="prodFormTitle">Codificación de producto</div>
+            <div class="section-desc" style="margin:0">Información comercial y configuración logística por unidad</div>
+          </div>
+          <span class="badge blue" id="prodFormBadge">Nuevo producto · Borrador</span>
+        </div>
+
+        <div class="alert-list" id="prodFormError" style="display:none">
+          <div class="alert-row on"><span class="ai">⚠</span> Nombre, línea, código de importación y referencia son obligatorios.</div>
+        </div>
+        <div class="alert-list" id="prodReadonlyNotice" style="display:none">
+          <div class="alert-row off"><span class="ai">👁</span> Tu perfil tiene permiso de solo lectura sobre Productos — no puedes crear ni editar.</div>
+        </div>
+
+        <div class="section-title" style="font-size:12.5px">Información del producto <span style="font-weight:400; color:var(--text-faint)">— * campo obligatorio</span></div>
+        <div class="field-row">
+          <div class="field"><label>ID</label><input id="prodId" value="Autogenerado" disabled></div>
+          <div class="field" style="grid-column:span 2"><label>Nombre *</label><input id="prodNombre" placeholder="Nombre comercial completo"></div>
+          <div class="field"><label>Marca *</label><select id="prodMarca"><option>JLC</option><option>Otra marca configurada</option></select></div>
+          <div class="field"><label>Línea *</label><select id="prodLinea">
+            <option value="">Seleccionar</option><option>Refrigeración</option><option>Lavado</option><option>Audio</option><option>Electromenores</option><option>Televisores</option>
+          </select></div>
+          <div class="field"><label>Código de importación *</label><input id="prodCodigoImportacion" placeholder="Código único"></div>
+          <div class="field" style="grid-column:span 2"><label>Referencia / Modelo *</label><input id="prodReferencia" placeholder="Ej. JLC-325NVNFIA" oninput="actualizarResumenProducto()"></div>
+          <div class="field"><label>Proveedor / Fabricante</label><select id="prodProveedor"></select></div>
+          <div class="field"><label>Estado</label><select id="prodEstado"><option>Activo</option><option>Inactivo</option></select></div>
+        </div>
+
+        <div class="section-title" style="font-size:12.5px">Dimensiones y peso por unidad <span style="font-weight:400; color:var(--text-faint)">— registrar medidas del producto empacado</span></div>
+        <div class="field-row">
+          <div class="field"><label>Peso por unidad *</label><div class="unit-input"><input id="prodPeso" type="number" min="0" step="0.01" placeholder="0.00" oninput="actualizarResumenProducto()"><span class="unit-suffix">kg</span></div></div>
+          <div class="field"><label>Largo *</label><div class="unit-input"><input id="prodLargo" type="number" min="0" step="0.01" placeholder="0.00" oninput="actualizarResumenProducto()"><span class="unit-suffix">cm</span></div></div>
+          <div class="field"><label>Ancho *</label><div class="unit-input"><input id="prodAncho" type="number" min="0" step="0.01" placeholder="0.00" oninput="actualizarResumenProducto()"><span class="unit-suffix">cm</span></div></div>
+          <div class="field"><label>Alto *</label><div class="unit-input"><input id="prodAlto" type="number" min="0" step="0.01" placeholder="0.00" oninput="actualizarResumenProducto()"><span class="unit-suffix">cm</span></div></div>
+          <div class="field"><label>Volumen por unidad</label><div class="unit-input"><input id="prodCbm" value="0.0000" disabled><span class="unit-suffix">m³</span></div></div>
+        </div>
+
+        <div class="section-title" style="font-size:12.5px">Modalidad habitual de carga <span style="font-weight:400; color:var(--text-faint)">— seleccione una modalidad</span></div>
+        <div class="mode-grid">
+          <div class="mode-card" id="modeLcl" onclick="setModalidadProducto('LCL')">
+            <strong>LCL</strong>
+            <span>El producto normalmente se carga en cantidades inferiores a un contenedor completo.</span>
+          </div>
+          <div class="mode-card active" id="modeFcl" onclick="setModalidadProducto('FCL')">
+            <strong>FCL</strong>
+            <span>El producto normalmente se compra y transporta por contenedor completo.</span>
           </div>
         </div>
-        <div class="btn-row"><button class="btn btn-ghost">Guardar borrador</button><button class="btn btn-primary">Enviar al certificador</button></div>
+
+        <div id="panelLcl" style="display:none">
+          <div class="section" style="background:var(--input-bg); margin-bottom:14px">
+            <div class="section-title" style="font-size:12.5px">Configuración LCL</div>
+            <div class="section-desc" style="margin:0">El sistema utilizará el peso y los m³ por unidad para calcular el espacio de la carga consolidada.</div>
+          </div>
+        </div>
+
+        <div id="panelFcl">
+          <div class="section-desc">Escribe solo las unidades por contenedor — los m³ y el peso neto se calculan solos a partir de las dimensiones de arriba.</div>
+          <div class="table-card"><table>
+            <thead><tr><th>Tipo de contenedor</th><th>Unidades por contenedor</th><th class="num">m³ de producto</th><th class="num">Peso neto estimado</th></tr></thead>
+            <tbody>
+              <tr><td><b>20STD</b></td>
+                <td><input class="cap-input" id="cap20" type="number" min="0" step="1" placeholder="0" oninput="actualizarResumenProducto()"></td>
+                <td class="num" id="cbm20">0.000 m³</td><td class="num" id="kg20">0.00 kg</td></tr>
+              <tr><td><b>40STD</b></td>
+                <td><input class="cap-input" id="cap40" type="number" min="0" step="1" placeholder="0" oninput="actualizarResumenProducto()"></td>
+                <td class="num" id="cbm40">0.000 m³</td><td class="num" id="kg40">0.00 kg</td></tr>
+              <tr><td><b>40HQ</b></td>
+                <td><input class="cap-input" id="cap40hq" type="number" min="0" step="1" placeholder="0" oninput="actualizarResumenProducto()"></td>
+                <td class="num" id="cbm40hq">0.000 m³</td><td class="num" id="kg40hq">0.00 kg</td></tr>
+            </tbody>
+          </table></div>
+        </div>
+
+        <div class="section-title" style="font-size:12.5px">Resumen para compras e importaciones <span style="font-weight:400; color:var(--text-faint)">— se actualiza automáticamente</span></div>
+        <div class="indicator-grid" style="grid-template-columns:repeat(4,1fr)">
+          <div class="indicator"><div class="lbl">Referencia</div><div class="num2" style="font-size:14px" id="sumRef">Sin definir</div></div>
+          <div class="indicator"><div class="lbl">Modalidad</div><div class="num2" style="font-size:14px" id="sumMode">FCL</div></div>
+          <div class="indicator"><div class="lbl">Peso unitario</div><div class="num2" style="font-size:14px" id="sumWeight">0.00 kg</div></div>
+          <div class="indicator"><div class="lbl">Volumen unitario</div><div class="num2" style="font-size:14px" id="sumCbm">0.0000 m³</div></div>
+        </div>
+
+        <div class="btn-row">
+          <button class="btn btn-ghost" onclick="closeProductoForm()">Cancelar</button>
+          <button class="btn btn-primary" id="prodSaveBtn" onclick="saveProducto()">Guardar producto</button>
+        </div>
       </div>
 
-      <div class="section">
-        <div class="toolbar" style="margin-bottom:6px"><div class="section-title" style="margin:0">Documentos finales de la certificación — RQ-2026-0117</div><span class="badge blue">Pendiente de aprobación</span></div>
-        <div class="doc-list">
-          <div class="doc-row"><div class="doc-check on">✓</div><div><div class="doc-name">Certificado definitivo emitido por el ente certificador</div><div class="doc-req">PDF</div></div><span class="badge ok">Cargado</span><span class="doc-action">Ver</span></div>
-          <div class="doc-row"><div class="doc-check"></div><div><div class="doc-name">Excel de referencias certificadas</div></div><span class="badge warn">Pendiente</span><span class="doc-action">Cargar</span></div>
-          <div class="doc-row"><div class="doc-check"></div><div><div class="doc-name">Soporte(s) SICERCO</div><div class="doc-req">Una o varias imágenes que evidencien el registro</div></div><span class="badge warn">Pendiente</span><span class="doc-action">Seleccionar imágenes</span></div>
-        </div>
-        <div style="margin-top:10px">
-          <div class="section-desc" style="margin-bottom:4px">Completitud del cierre: <b>1 de 3</b> — cargue los documentos cuando el ente certificador emita la aprobación.</div>
-          <div class="progress-bar" style="width:140px"><div class="progress-fill warn" style="width:33%"></div></div>
-        </div>
-        <div class="btn-row"><button class="btn btn-disabled" disabled>Cerrar certificación (faltan 2 documentos)</button></div>
-      </div>
-
-      <div class="history-box">
-        <div class="history-head" onclick="this.nextElementSibling.classList.toggle('open')"><div class="history-title">Historial del trámite</div><div class="history-toggle">Ver ▾</div></div>
-        <div class="history-log">
-          <div class="hist-row"><span class="hist-time">2026-01-08 10:12</span><span class="hist-action">Cargó Test Report de fábrica</span><span class="hist-user">E. Torres</span></div>
-          <div class="hist-row"><span class="hist-time">2026-01-05 09:00</span><span class="hist-action">Creó el trámite en estado Borrador</span><span class="hist-user">E. Torres</span></div>
-        </div>
+      <div class="history-box" id="prodHistoryBox" style="display:none">
+        <div class="history-head" onclick="this.nextElementSibling.classList.toggle('open')"><div class="history-title">Historial de modificaciones</div><div class="history-toggle">Ver ▾</div></div>
+        <div class="history-log" id="prodHistoryLog"></div>
       </div>
     </div>
+
+    <script>
+      let productos = [
+        { id:'PRD-0001', codigo:'JLC-235NVFA', nombre:'Nevera 235L No Frost', marca:'JLC', linea:'Refrigeración',
+          codigoImportacion:'IMP-NEV-235', proveedorCodigo:'PROV-014', modalidad:'FCL', estado:'Activo',
+          peso:62, largo:68, ancho:60, alto:155,
+          capacidades:{ '20':180, '40':380, '40hq':420 },
+          historial:[{fecha:'2025-12-10 09:00', accion:'Codificó el producto', usuario:'M. C. Ortiz'}] },
+        { id:'PRD-0002', codigo:'JLC-LAV12KG', nombre:'Lavadora 12kg Carga Superior', marca:'JLC', linea:'Lavado',
+          codigoImportacion:'IMP-LAV-12', proveedorCodigo:'PROV-021', modalidad:'LCL', estado:'Activo',
+          peso:41, largo:58, ancho:60, alto:98,
+          capacidades:{ '20':'', '40':'', '40hq':'' },
+          historial:[{fecha:'2025-11-20 14:30', accion:'Codificó el producto', usuario:'M. C. Ortiz'}] },
+      ];
+      let prodEditingId = null;
+      let prodModalidadActual = 'FCL';
+
+      // Volumen en m³ a partir de cm: (L × A × H) / 1.000.000
+      function cbmDeProducto(p){
+        const l = parseFloat(p.largo) || 0, a = parseFloat(p.ancho) || 0, h = parseFloat(p.alto) || 0;
+        return (l * a * h) / 1000000;
+      }
+      function proveedorNombre(codigo){
+        const prov = (typeof proveedores !== 'undefined') ? proveedores.find(x => x.codigo === codigo) : null;
+        return prov ? prov.razonSocial : '—';
+      }
+
+      function renderProductos(){
+        const term = (document.getElementById('prodSearch').value || '').toLowerCase();
+        const tbody = document.getElementById('prodTableBody');
+        const filtered = productos.filter(p =>
+          p.codigo.toLowerCase().includes(term) || p.nombre.toLowerCase().includes(term)
+        );
+        const puedeEditar = hasPermiso('productos','editar');
+        const puedeCrear = hasPermiso('productos','crear');
+        const btnCrear = document.getElementById('btnCodificarProducto');
+        if (btnCrear) btnCrear.style.display = puedeCrear ? 'inline-block' : 'none';
+
+        tbody.innerHTML = filtered.map(p => `
+          <tr>
+            <td>${p.codigo}</td><td>${p.nombre}</td><td>${p.linea || '—'}</td>
+            <td>${proveedorNombre(p.proveedorCodigo)}</td>
+            <td><span class="badge ${p.modalidad === 'FCL' ? 'blue' : 'gray'}">${p.modalidad}</span></td>
+            <td class="num">${p.peso ? Number(p.peso).toFixed(2) + ' kg' : '—'}</td>
+            <td class="num">${cbmDeProducto(p).toFixed(4)} m³</td>
+            <td><span class="badge ${p.estado === 'Activo' ? 'ok' : 'gray'}">${p.estado}</span></td>
+            <td>${puedeEditar
+              ? `<span class="icon-btn icon-edit" onclick="viewProducto('${p.id}')" title="Ver y editar">✎</span>`
+              : `<span class="icon-btn icon-view" onclick="viewProducto('${p.id}')" title="Solo lectura">⊕</span>`}</td>
+          </tr>
+        `).join('') || '<tr><td colspan="9" style="text-align:center; color:var(--text-faint)">Sin resultados</td></tr>';
+      }
+
+      function populateProdProveedorSelect(){
+        const sel = document.getElementById('prodProveedor');
+        if (typeof proveedores === 'undefined') return;
+        sel.innerHTML = '<option value="">Seleccionar</option>' +
+          proveedores.map(pr => `<option value="${pr.codigo}">${pr.razonSocial}</option>`).join('');
+      }
+
+      function setModalidadProducto(mod){
+        prodModalidadActual = mod;
+        document.getElementById('modeFcl').classList.toggle('active', mod === 'FCL');
+        document.getElementById('modeLcl').classList.toggle('active', mod === 'LCL');
+        document.getElementById('panelFcl').style.display = mod === 'FCL' ? 'block' : 'none';
+        document.getElementById('panelLcl').style.display = mod === 'LCL' ? 'block' : 'none';
+        actualizarResumenProducto();
+      }
+
+      // Recalcula volumen unitario, m³/peso por contenedor y el resumen — todo de una vez.
+      function actualizarResumenProducto(){
+        const l = parseFloat(document.getElementById('prodLargo').value) || 0;
+        const a = parseFloat(document.getElementById('prodAncho').value) || 0;
+        const h = parseFloat(document.getElementById('prodAlto').value) || 0;
+        const kg = parseFloat(document.getElementById('prodPeso').value) || 0;
+        const cbm = (l * a * h) / 1000000;
+
+        document.getElementById('prodCbm').value = cbm.toFixed(4);
+        document.getElementById('sumCbm').textContent = cbm.toFixed(4) + ' m³';
+        document.getElementById('sumWeight').textContent = kg.toFixed(2) + ' kg';
+        document.getElementById('sumRef').textContent = document.getElementById('prodReferencia').value || 'Sin definir';
+        document.getElementById('sumMode').textContent = prodModalidadActual;
+
+        [['20','cap20','cbm20','kg20'], ['40','cap40','cbm40','kg40'], ['40hq','cap40hq','cbm40hq','kg40hq']]
+          .forEach(([key, capId, cbmId, kgId]) => {
+            const units = parseFloat(document.getElementById(capId).value) || 0;
+            document.getElementById(cbmId).textContent = (units * cbm).toFixed(3) + ' m³';
+            document.getElementById(kgId).textContent = (units * kg).toFixed(2) + ' kg';
+          });
+      }
+
+      function openProductoForm(){
+        prodEditingId = null;
+        document.getElementById('prodFormTitle').textContent = 'Codificación de producto';
+        document.getElementById('prodFormBadge').textContent = 'Nuevo producto · Borrador';
+        document.getElementById('prodId').value = 'Autogenerado';
+        ['prodNombre','prodCodigoImportacion','prodReferencia','prodPeso','prodLargo','prodAncho','prodAlto','cap20','cap40','cap40hq']
+          .forEach(id => document.getElementById(id).value = '');
+        document.getElementById('prodMarca').value = 'JLC';
+        document.getElementById('prodLinea').value = '';
+        document.getElementById('prodEstado').value = 'Activo';
+        populateProdProveedorSelect();
+        setModalidadProducto('FCL');
+        document.getElementById('prodFormError').style.display = 'none';
+        document.getElementById('prodFormSection').style.display = 'block';
+        document.getElementById('prodHistoryBox').style.display = 'none';
+        applyProductoFormPermission();
+        document.getElementById('prodNombre').focus();
+      }
+
+      function closeProductoForm(){ document.getElementById('prodFormSection').style.display = 'none'; }
+
+      function saveProducto(){
+        const nombre = document.getElementById('prodNombre').value.trim();
+        const linea = document.getElementById('prodLinea').value;
+        const codigoImportacion = document.getElementById('prodCodigoImportacion').value.trim();
+        const referencia = document.getElementById('prodReferencia').value.trim();
+        const errBox = document.getElementById('prodFormError');
+
+        if (!nombre || !linea || !codigoImportacion || !referencia){
+          errBox.querySelector('.alert-row').innerHTML = '<span class="ai">⚠</span> Nombre, línea, código de importación y referencia son obligatorios.';
+          errBox.style.display = 'block';
+          return;
+        }
+        if (!prodEditingId && productos.some(p => p.codigo === referencia)){
+          errBox.querySelector('.alert-row').innerHTML = '<span class="ai">⚠</span> Ya existe un producto con esa referencia — usa otra o edita el existente.';
+          errBox.style.display = 'block';
+          return;
+        }
+
+        const data = {
+          codigo: referencia, nombre, linea, codigoImportacion,
+          marca: document.getElementById('prodMarca').value,
+          proveedorCodigo: document.getElementById('prodProveedor').value,
+          estado: document.getElementById('prodEstado').value,
+          modalidad: prodModalidadActual,
+          peso: parseFloat(document.getElementById('prodPeso').value) || '',
+          largo: parseFloat(document.getElementById('prodLargo').value) || '',
+          ancho: parseFloat(document.getElementById('prodAncho').value) || '',
+          alto: parseFloat(document.getElementById('prodAlto').value) || '',
+          capacidades: {
+            '20': document.getElementById('cap20').value,
+            '40': document.getElementById('cap40').value,
+            '40hq': document.getElementById('cap40hq').value,
+          },
+        };
+        const now = new Date().toISOString().slice(0,16).replace('T',' ');
+
+        if (prodEditingId){
+          const idx = productos.findIndex(p => p.id === prodEditingId);
+          productos[idx] = { ...productos[idx], ...data };
+          productos[idx].historial.unshift({fecha: now, accion:'Editó la ficha del producto', usuario:'María Camila Ortiz'});
+        } else {
+          const nextNum = 1 + Math.max(0, ...productos.map(p => parseInt(String(p.id).split('-')[1], 10) || 0));
+          const id = 'PRD-' + String(nextNum).padStart(4,'0');
+          productos.push({ id, ...data, historial:[{fecha: now, accion:'Codificó el producto', usuario:'María Camila Ortiz'}] });
+        }
+        renderProductos();
+        closeProductoForm();
+      }
+
+      function viewProducto(id){
+        const p = productos.find(x => x.id === id);
+        if (!p) return;
+        prodEditingId = p.id;
+        document.getElementById('prodFormTitle').textContent = 'Codificación de producto';
+        document.getElementById('prodFormBadge').textContent = p.codigo + ' · ' + p.estado;
+        document.getElementById('prodId').value = p.id;
+        document.getElementById('prodNombre').value = p.nombre;
+        document.getElementById('prodMarca').value = p.marca || 'JLC';
+        document.getElementById('prodLinea').value = p.linea || '';
+        document.getElementById('prodCodigoImportacion').value = p.codigoImportacion || '';
+        document.getElementById('prodReferencia').value = p.codigo;
+        populateProdProveedorSelect();
+        document.getElementById('prodProveedor').value = p.proveedorCodigo || '';
+        document.getElementById('prodEstado').value = p.estado;
+        document.getElementById('prodPeso').value = p.peso || '';
+        document.getElementById('prodLargo').value = p.largo || '';
+        document.getElementById('prodAncho').value = p.ancho || '';
+        document.getElementById('prodAlto').value = p.alto || '';
+        document.getElementById('cap20').value = p.capacidades?.['20'] || '';
+        document.getElementById('cap40').value = p.capacidades?.['40'] || '';
+        document.getElementById('cap40hq').value = p.capacidades?.['40hq'] || '';
+        setModalidadProducto(p.modalidad || 'FCL');
+        document.getElementById('prodFormError').style.display = 'none';
+        document.getElementById('prodFormSection').style.display = 'block';
+        document.getElementById('prodHistoryBox').style.display = 'block';
+        document.getElementById('prodHistoryLog').innerHTML = p.historial.map(h => `
+          <div class="hist-row"><span class="hist-time">${h.fecha}</span><span class="hist-action">${h.accion}</span><span class="hist-user">${h.usuario}</span></div>
+        `).join('');
+        applyProductoFormPermission();
+      }
+
+      function applyProductoFormPermission(){
+        const puedeEditar = hasPermiso('productos','editar');
+        const form = document.getElementById('prodFormSection');
+        form.querySelectorAll('input, select').forEach(el => { el.disabled = !puedeEditar; });
+        // Campos siempre calculados/solo-lectura, independientes del permiso
+        document.getElementById('prodCbm').disabled = true;
+        document.getElementById('prodId').disabled = true;
+        // Las tarjetas de modalidad no deben responder al clic en solo lectura
+        document.getElementById('modeFcl').style.pointerEvents = puedeEditar ? 'auto' : 'none';
+        document.getElementById('modeLcl').style.pointerEvents = puedeEditar ? 'auto' : 'none';
+        const saveBtn = document.getElementById('prodSaveBtn');
+        if (saveBtn) saveBtn.style.display = puedeEditar ? 'inline-block' : 'none';
+        const notice = document.getElementById('prodReadonlyNotice');
+        if (notice) notice.style.display = puedeEditar ? 'none' : 'block';
+      }
+
+      renderProductos();
+    </script>
+
+    <!-- ============ LICENCIAS ============ -->
+    <div class="panel" id="panel-licencias">
+      <!-- Alertas de vencimiento -->
+      <div id="licAlertas"></div>
+
+      <div class="kpi-grid" id="licKpis"></div>
+
+      <div class="toolbar">
+        <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center">
+          <input class="search-input" id="licSearch" placeholder="Buscar referencia o número..." oninput="renderLicencias()">
+          <select class="search-input" style="width:auto" id="licFiltroTipo" onchange="renderLicencias()">
+            <option value="">Todos los procesos</option>
+          </select>
+          <select class="search-input" style="width:auto" id="licFiltroEstado" onchange="renderLicencias()">
+            <option value="">Todos los estados</option>
+            <option value="Activa">Activa</option>
+            <option value="Por vencer">Por vencer</option>
+            <option value="Vencida">Vencida</option>
+            <option value="Pendiente">Pendiente</option>
+          </select>
+        </div>
+        <div style="display:flex; gap:8px">
+          <button class="btn btn-export" onclick="exportarReporteLicencias()">⬇ Reporte detallado</button>
+          <button class="btn btn-primary" id="btnNuevaLicencia" onclick="openLicenciaForm()">+ Nuevo trámite</button>
+        </div>
+      </div>
+
+      <div class="table-card"><table>
+        <thead><tr><th>Proceso</th><th>Tipo</th><th>Referencia</th><th>N° licencia</th><th>Ente</th><th>Vigencia</th><th class="num">Días</th><th>Estado</th><th>Acciones</th></tr></thead>
+        <tbody id="licTableBody"></tbody>
+      </table></div>
+
+      <div class="section" id="licFormSection" style="display:none">
+        <div class="toolbar" style="margin-bottom:10px">
+          <div>
+            <div class="section-title" style="margin:0">Creación de licencia</div>
+            <div class="section-desc" style="margin:0">Gestión documental y envío al ente certificador</div>
+          </div>
+          <span class="badge blue" id="licFormBadge">Nuevo trámite · Borrador</span>
+        </div>
+
+        <div class="alert-list" id="licReadonlyNotice" style="display:none">
+          <div class="alert-row off"><span class="ai">👁</span> Tu perfil tiene permiso de solo lectura sobre Licencias — no puedes crear ni editar.</div>
+        </div>
+
+        <div class="stepper">
+          <div class="step current"><div class="dot">01</div><div class="lbl">Datos de licencia</div></div>
+          <div class="step"><div class="dot">02</div><div class="lbl">Documentos<div class="bar"></div></div></div>
+          <div class="step"><div class="dot">03</div><div class="lbl">Validación<div class="bar"></div></div></div>
+          <div class="step"><div class="dot">04</div><div class="lbl">Envío<div class="bar"></div></div></div>
+          <div class="step"><div class="dot">05</div><div class="lbl">Cierre<div class="bar"></div></div></div>
+        </div>
+
+        <div class="section-title" style="font-size:12.5px">Descripción del proceso <span style="font-weight:400; color:var(--text-faint)">— define qué documentos se piden</span></div>
+        <div class="field-row">
+          <div class="field" style="grid-column:span 2"><label>Proceso de licenciamiento *</label>
+            <select id="licProceso" onchange="onCambioProcesoLicencia()"></select>
+          </div>
+          <div class="field"><label>Tipo de trámite</label>
+            <select id="licSubtipo" onchange="renderLicDocs()"></select>
+          </div>
+        </div>
+
+        <div class="section-title" style="font-size:12.5px">Información de la licencia <span style="font-weight:400; color:var(--text-faint)">— * campo obligatorio</span></div>
+        <div class="field-row">
+          <div class="field" style="grid-column:span 2"><label>Producto codificado *</label>
+            <select id="licProductoRef" onchange="onSeleccionProductoLicencia()"></select>
+          </div>
+          <div class="field"><label>Referencia / Modelo</label><input id="licReferencia" disabled></div>
+          <div class="field"><label>Nombre del producto</label><input id="licProducto" disabled></div>
+          <div class="field"><label>Proveedor / Fabricante</label><select id="licProveedor" disabled></select></div>
+          <div class="field"><label>Número de licencia</label><input id="licNumero" placeholder="Asignado por certificador"></div>
+          <div class="field"><label>Propietario *</label><input id="licPropietario" value="JLC ELECTRONICS" oninput="actualizarCompletitudLicencia()"></div>
+          <div class="field"><label>Fecha de inicio de vigencia</label><input id="licFechaInicio" type="date" onchange="actualizarCompletitudLicencia()"></div>
+          <div class="field"><label>Fecha de vencimiento *</label><input id="licFechaVencimiento" type="date" onchange="actualizarCompletitudLicencia()"></div>
+          <div class="field"><label>Estado calculado</label><input id="licEstadoCalculado" disabled></div>
+        </div>
+
+        <div class="toolbar" style="margin-bottom:6px">
+          <div class="section-title" style="margin:0; font-size:12.5px" id="licDocsTitle">Documentos requeridos</div>
+          <span class="badge warn" id="licDocsCounter">0 de 0 cargados</span>
+        </div>
+        <div class="doc-list" id="licDocsList"></div>
+        <div class="btn-row" style="justify-content:flex-start; margin-top:8px">
+          <button class="btn btn-ghost" id="btnAgregarDocLic" onclick="agregarDocumentoLicencia()">+ Agregar documento adicional</button>
+        </div>
+
+        <div class="section-title" style="font-size:12.5px">Ente certificador y destinatarios <span style="font-weight:400; color:var(--text-faint)">— contactos desde la Matriz de Entes</span></div>
+        <div class="field-row">
+          <div class="field"><label>Ente certificador *</label><select id="licCertificador" onchange="renderContactosCertificador()"></select></div>
+          <div style="grid-column:span 2">
+            <label style="display:block; font-size:11px; font-weight:600; color:var(--text-dim); margin-bottom:5px">Destinatarios del correo</label>
+            <div class="contact-panel" id="licContactPanel">
+              <strong>Sin destinatarios seleccionados</strong>
+              <p>Seleccione el ente certificador para cargar sus responsables, correos y teléfonos registrados.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-title" style="font-size:12.5px">Observaciones del trámite</div>
+        <textarea id="licObservaciones" class="lic-textarea" placeholder="Indicaciones, alcance, familia de modelos u observaciones para el ente certificador"></textarea>
+
+        <div class="lic-footer">
+          <div style="flex:1; min-width:220px">
+            <div style="display:flex; justify-content:space-between; font-size:11.5px; margin-bottom:6px">
+              <span style="color:var(--text-dim); font-weight:600">Completitud del expediente</span>
+              <strong id="licProgressText">0%</strong>
+            </div>
+            <div class="progress-bar" style="width:100%"><div class="progress-fill warn" id="licProgressFill" style="width:0%"></div></div>
+            <div class="section-desc" style="margin:6px 0 0" id="licValidationMsg">Complete los campos obligatorios y cargue todos los documentos.</div>
+          </div>
+          <div class="btn-row" style="margin:0">
+            <button class="btn btn-ghost" onclick="closeLicenciaForm()">Cancelar</button>
+            <button class="btn btn-ghost" id="licSaveBtn" onclick="saveLicencia()">Guardar borrador</button>
+            <button class="btn btn-disabled" id="licSendBtn" disabled onclick="enviarLicencia()">Enviar al certificador</button>
+          </div>
+        </div>
+
+        <div class="toolbar" style="margin-top:20px; margin-bottom:6px">
+          <div>
+            <div class="section-title" style="margin:0; font-size:12.5px">Histórico de certificados de esta referencia</div>
+            <div class="section-desc" style="margin:0">Cada renovación conserva el certificado anterior — nunca se sobrescribe.</div>
+          </div>
+          <button class="btn btn-ghost" id="btnRenovarLic" onclick="iniciarRenovacion()">↻ Registrar renovación</button>
+        </div>
+        <div class="table-card"><table>
+          <thead><tr><th>N° certificado</th><th>Ente certificador</th><th>Vigencia</th><th>Estado</th><th>Archivo</th></tr></thead>
+          <tbody id="licVersionesBody"></tbody>
+        </table></div>
+
+        <div class="toolbar" style="margin-top:20px; margin-bottom:6px">
+          <div class="section-title" style="margin:0; font-size:12.5px">Documentos finales de la certificación</div>
+          <span class="badge blue" id="licClosingStatus">Pendiente de aprobación</span>
+        </div>
+        <div class="doc-list" id="licClosingDocs"></div>
+        <div style="margin-top:10px">
+          <div style="display:flex; justify-content:space-between; font-size:11.5px; margin-bottom:6px">
+            <span style="color:var(--text-dim); font-weight:600">Completitud del cierre</span>
+            <strong id="licClosingText">0 de 3</strong>
+          </div>
+          <div class="progress-bar" style="width:100%"><div class="progress-fill warn" id="licClosingFill" style="width:0%"></div></div>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-disabled" id="licCloseBtn" disabled onclick="cerrarCertificacion()">Cerrar certificación</button>
+        </div>
+      </div>
+
+      <div class="history-box" id="licHistoryBox" style="display:none">
+        <div class="history-head" onclick="this.nextElementSibling.classList.toggle('open')"><div class="history-title">Historial del trámite</div><div class="history-toggle">Ver ▾</div></div>
+        <div class="history-log" id="licHistoryLog"></div>
+      </div>
+    </div>
+
+    <script>
+      const DIAS_ALERTA_VENCIMIENTO = 15;
+
+      const LIC_DOCS_CIERRE = [
+        ['Certificado final aprobado','Certificado definitivo emitido por el ente certificador · PDF'],
+        ['Referencia de certificación','Listado de referencias, modelos y alcance aprobado · Excel'],
+        ['Soportes SICERCO','Una o varias imágenes que evidencien el registro'],
+      ];
+
+      // ---- Matriz de procesos de licenciamiento (editable en Administración) ----
+      // Cada proceso define sus propios subtipos y el checklist de cada uno.
+      let procesosLicencia = [
+        { codigo:'PRC-001', nombre:'RETIQ', descripcion:'Etiquetado de eficiencia energética', estado:'Activo',
+          subtipos:[
+            { nombre:'Licencia principal', docs:[
+              ['Certificado ISO 9001 actualizado del fabricante','PDF'],
+              ['Test Report de la fábrica','PDF'],
+              ['Flujos del proceso de la línea de ensamble','PDF / XLSX'],
+              ['Relación de componentes críticos','PDF / XLSX'],
+              ['Registro de producción','PDF / XLSX'],
+              ['Declaración de material de etiqueta','Formato con logo JLC · papel ≥75 g/m² o plástico ≥45 g/m²'],
+              ['Manual de usuario JLC','PDF / arte final'],
+              ['Rating label JLC','Arte final'],
+              ['Diseño de caja JLC','Arte final'],
+              ['Material POP JLC','Arte final'],
+              ['Diseño de etiqueta RETIQ JLC','Arte final'],
+              ['Etiquetas adicionales u otros artes','Archivos aplicables al producto'],
+              ['Fotografías del producto','Fotos HD del producto, empaque, vistas exteriores e interiores y placa de características'],
+              ['Formulario de aplicación','Formato diligenciado y firmado'],
+              ['Soporte de pago de la licencia','PDF / imagen'],
+              ['Vigencia solicitada de la licencia','Soporte o comunicación'],
+            ]},
+            { nombre:'Sublicencia', docs:[
+              ['Etiqueta RETIQ principal del fabricante','Archivo original'],
+              ['Licencia principal del fabricante','PDF vigente'],
+              ['Test Report del fabricante','PDF'],
+              ['Rating label JLC','Arte final'],
+              ['Manual de usuario JLC','PDF'],
+              ['Material POP JLC','Arte final'],
+              ['Etiqueta RETIQ original JLC','Arte final'],
+              ['Diseño de caja JLC','Arte final'],
+              ['Fotografías del producto','Fotos HD del producto, empaque, vistas exteriores e interiores y placa de características'],
+              ['Formulario de aplicación de sublicencia','Formato diligenciado y firmado'],
+              ['Soporte de pago de la licencia','PDF / imagen'],
+              ['Vigencia solicitada de la licencia','Soporte o comunicación'],
+            ]},
+          ]},
+        { codigo:'PRC-002', nombre:'CEPD', descripcion:'Certificado de Ensayo y Producto Determinado', estado:'Activo',
+          subtipos:[{ nombre:'Certificación', docs:[
+            ['Ficha técnica del producto','PDF'],
+            ['Informe de ensayo de laboratorio','PDF'],
+            ['Declaración de conformidad del fabricante','PDF'],
+            ['Formulario de aplicación','Formato diligenciado y firmado'],
+            ['Soporte de pago','PDF / imagen'],
+          ]}]},
+        { codigo:'PRC-003', nombre:'RAEE', descripcion:'Residuos de Aparatos Eléctricos y Electrónicos', estado:'Activo',
+          subtipos:[{ nombre:'Plan de gestión', docs:[
+            ['Plan de gestión ambiental RAEE','PDF'],
+            ['Reporte de toneladas puestas en mercado','XLSX'],
+            ['Convenio con gestor autorizado','PDF'],
+            ['Certificado de disposición final','PDF'],
+            ['Soporte de pago','PDF / imagen'],
+          ]}]},
+        { codigo:'PRC-004', nombre:'Disposición de llantas', descripcion:'Gestión posconsumo de llantas usadas', estado:'Activo',
+          subtipos:[{ nombre:'Plan posconsumo', docs:[
+            ['Plan de gestión posconsumo','PDF'],
+            ['Reporte de unidades puestas en mercado','XLSX'],
+            ['Convenio con gestor autorizado','PDF'],
+            ['Certificado de disposición final','PDF'],
+          ]}]},
+        { codigo:'PRC-005', nombre:'Disposición de plásticos y cartón', descripcion:'Gestión de envases y empaques', estado:'Activo',
+          subtipos:[{ nombre:'Plan de gestión', docs:[
+            ['Plan de gestión de envases y empaques','PDF'],
+            ['Reporte de toneladas de material','XLSX'],
+            ['Convenio con gestor autorizado','PDF'],
+            ['Certificado de aprovechamiento','PDF'],
+          ]}]},
+      ];
+      function procesoNombre(codigo){
+        const p = procesosLicencia.find(x => x.codigo === codigo);
+        return p ? p.nombre : '—';
+      }
+
+      let licencias = [
+        { id:'LIC-0001', proceso:'PRC-001', subtipo:'Sublicencia', producto:'Refrigerador No Frost 235L', referencia:'JLC-235NVFA',
+          proveedorCodigo:'PROV-014', numero:'RQ-2025-8841', propietario:'JLC ELECTRONICS',
+          fechaInicio:'2025-09-22', fechaVencimiento:'2027-09-22', certificador:'ENT-001', observaciones:'',
+          docsCargados:{}, cierreCargados:{}, etapa:'Cierre',
+          versiones:[
+            { numero:'RQ-2022-4410', ente:'ENT-002', inicio:'2022-08-15', vencimiento:'2025-08-15', estado:'Vencida', archivo:'certificado-2022.pdf' },
+            { numero:'RQ-2019-1877', ente:'ENT-002', inicio:'2019-07-01', vencimiento:'2022-07-01', estado:'Vencida', archivo:'certificado-2019.pdf' },
+          ],
+          historial:[{fecha:'2025-09-22 10:00', accion:'Cerró la certificación', usuario:'E. Torres'}] },
+        { id:'LIC-0002', proceso:'PRC-001', subtipo:'Licencia principal', producto:'Refrigerador No Frost 689L', referencia:'JLC-689NVNFIA',
+          proveedorCodigo:'PROV-014', numero:'RQ-2026-0117', propietario:'JLC ELECTRONICS',
+          fechaInicio:'', fechaVencimiento:'', certificador:'ENT-001', observaciones:'',
+          docsCargados:{0:'iso9001.pdf', 1:'test-report.pdf', 2:'flujo-ensamble.pdf'}, cierreCargados:{}, etapa:'Documentos',
+          versiones:[],
+          historial:[{fecha:'2026-01-05 09:00', accion:'Creó el trámite en estado Borrador', usuario:'E. Torres'}] },
+        { id:'LIC-0003', proceso:'PRC-003', subtipo:'Plan de gestión', producto:'Línea blanca — RAEE anual', referencia:'RAEE-2026',
+          proveedorCodigo:'', numero:'RAEE-2025-3390', propietario:'JLC ELECTRONICS',
+          fechaInicio:'2025-04-01', fechaVencimiento:'2026-09-15', certificador:'ENT-003', observaciones:'',
+          docsCargados:{}, cierreCargados:{}, etapa:'Cierre',
+          versiones:[],
+          historial:[{fecha:'2025-04-01 08:00', accion:'Registró el plan de gestión', usuario:'E. Torres'}] },
+      ];
+      let licEditingId = null;
+      let licDocsAdicionales = [];
+      let licDocsCargadosTemp = {};
+      let licCierreCargadosTemp = {};
+
+      // ---- Estado y vigencia calculados a partir de las fechas ----
+      function diasHastaVencimiento(fechaVencimiento){
+        if (!fechaVencimiento) return null;
+        const hoy = new Date(); hoy.setHours(0,0,0,0);
+        const venc = new Date(fechaVencimiento + 'T00:00:00');
+        return Math.round((venc - hoy) / 86400000);
+      }
+      function estadoLicencia(l){
+        if (!l.fechaVencimiento || !l.fechaInicio) return 'Pendiente';
+        const hoy = new Date(); hoy.setHours(0,0,0,0);
+        const inicio = new Date(l.fechaInicio + 'T00:00:00');
+        const dias = diasHastaVencimiento(l.fechaVencimiento);
+        if (hoy < inicio) return 'Pendiente';
+        if (dias < 0) return 'Vencida';
+        if (dias <= DIAS_ALERTA_VENCIMIENTO) return 'Por vencer';
+        return 'Activa';
+      }
+      function badgeEstadoLicencia(estado){
+        if (estado === 'Activa') return 'ok';
+        if (estado === 'Por vencer') return 'warn';
+        if (estado === 'Vencida') return 'danger';
+        return 'gray';
+      }
+
+      function renderLicAlertas(){
+        const porVencer = licencias.filter(l => estadoLicencia(l) === 'Por vencer');
+        const vencidas = licencias.filter(l => estadoLicencia(l) === 'Vencida');
+        const box = document.getElementById('licAlertas');
+        let html = '';
+        if (vencidas.length){
+          html += `<div class="alert-list"><div class="alert-row on"><span class="ai">⚠</span> ${vencidas.length} licencia(s) VENCIDA(S): ${vencidas.map(l => l.referencia + ' (' + procesoNombre(l.proceso) + ')').join(', ')} — no se puede nacionalizar con estas vencidas.</div></div>`;
+        }
+        if (porVencer.length){
+          html += `<div class="alert-list"><div class="alert-row on" style="background:var(--amber-soft); color:var(--amber)"><span class="ai">⏱</span> ${porVencer.length} licencia(s) vence(n) en ${DIAS_ALERTA_VENCIMIENTO} días o menos: ${porVencer.map(l => l.referencia + ' — ' + diasHastaVencimiento(l.fechaVencimiento) + ' días').join(', ')}. Inicia la renovación.</div></div>`;
+        }
+        box.innerHTML = html;
+      }
+
+      function renderLicKpis(){
+        const c = { Activa:0, 'Por vencer':0, Vencida:0, Pendiente:0 };
+        licencias.forEach(l => { c[estadoLicencia(l)]++; });
+        document.getElementById('licKpis').innerHTML = `
+          <div class="kpi"><div class="lbl">Activas</div><div class="val ok">${c.Activa}</div></div>
+          <div class="kpi"><div class="lbl">Por vencer (${DIAS_ALERTA_VENCIMIENTO} días)</div><div class="val warn">${c['Por vencer']}</div></div>
+          <div class="kpi"><div class="lbl">Vencidas</div><div class="val danger">${c.Vencida}</div></div>
+          <div class="kpi"><div class="lbl">Pendientes</div><div class="val">${c.Pendiente}</div></div>`;
+      }
+
+      function populateLicFiltroTipo(){
+        const sel = document.getElementById('licFiltroTipo');
+        const actual = sel.value;
+        sel.innerHTML = '<option value="">Todos los procesos</option>' +
+          procesosLicencia.map(p => `<option value="${p.codigo}">${p.nombre}</option>`).join('');
+        sel.value = actual;
+      }
+
+      function renderLicencias(){
+        renderLicAlertas();
+        renderLicKpis();
+        populateLicFiltroTipo();
+
+        const term = (document.getElementById('licSearch').value || '').toLowerCase();
+        const fTipo = document.getElementById('licFiltroTipo').value;
+        const fEstado = document.getElementById('licFiltroEstado').value;
+        const puedeEditar = hasPermiso('licencias','editar');
+        const btnCrear = document.getElementById('btnNuevaLicencia');
+        if (btnCrear) btnCrear.style.display = hasPermiso('licencias','crear') ? 'inline-block' : 'none';
+
+        const filtered = licencias.filter(l => {
+          const est = estadoLicencia(l);
+          return (l.referencia.toLowerCase().includes(term) || (l.numero||'').toLowerCase().includes(term))
+            && (!fTipo || l.proceso === fTipo)
+            && (!fEstado || est === fEstado);
+        });
+
+        document.getElementById('licTableBody').innerHTML = filtered.map(l => {
+          const est = estadoLicencia(l);
+          const dias = diasHastaVencimiento(l.fechaVencimiento);
+          return `
+          <tr>
+            <td><span class="badge blue">${procesoNombre(l.proceso)}</span></td>
+            <td>${l.subtipo || '—'}</td>
+            <td>${l.referencia}</td><td>${l.numero || '—'}</td>
+            <td>${enteNombre(l.certificador)}</td>
+            <td>${l.fechaInicio || '—'} → ${l.fechaVencimiento || 'sin definir'}</td>
+            <td class="num">${dias === null ? '—' : (dias < 0 ? 'vencida' : dias + 'd')}</td>
+            <td><span class="badge ${badgeEstadoLicencia(est)}">${est}</span></td>
+            <td>${puedeEditar
+              ? `<span class="icon-btn icon-edit" onclick="viewLicencia('${l.id}')" title="Ver y editar">✎</span>`
+              : `<span class="icon-btn icon-view" onclick="viewLicencia('${l.id}')" title="Solo lectura">⊕</span>`}</td>
+          </tr>`;
+        }).join('') || '<tr><td colspan="9" style="text-align:center; color:var(--text-faint)">Sin resultados</td></tr>';
+      }
+
+      // ---- Proceso / subtipo / checklist dinámico ----
+      function populateLicProcesoSelect(){
+        const sel = document.getElementById('licProceso');
+        const actual = sel.value;
+        sel.innerHTML = '<option value="">Seleccionar proceso</option>' +
+          procesosLicencia.filter(p => p.estado === 'Activo').map(p => `<option value="${p.codigo}">${p.nombre} — ${p.descripcion}</option>`).join('');
+        sel.value = actual;
+      }
+      function populateLicSubtipoSelect(){
+        const proc = procesosLicencia.find(p => p.codigo === document.getElementById('licProceso').value);
+        const sel = document.getElementById('licSubtipo');
+        sel.innerHTML = proc ? proc.subtipos.map(s => `<option value="${s.nombre}">${s.nombre}</option>`).join('')
+                             : '<option value="">Seleccione un proceso primero</option>';
+      }
+      function onCambioProcesoLicencia(){
+        populateLicSubtipoSelect();
+        licDocsCargadosTemp = {}; // el checklist cambia, los cargados anteriores ya no aplican
+        licDocsAdicionales = [];
+        renderLicDocs();
+      }
+      function licDocsActuales(){
+        const proc = procesosLicencia.find(p => p.codigo === document.getElementById('licProceso').value);
+        if (!proc) return [];
+        const sub = proc.subtipos.find(s => s.nombre === document.getElementById('licSubtipo').value) || proc.subtipos[0];
+        return [...(sub ? sub.docs : []), ...licDocsAdicionales];
+      }
+
+      function renderLicDocs(){
+        const docs = licDocsActuales();
+        const puedeEditar = hasPermiso('licencias','editar');
+        const proc = procesosLicencia.find(p => p.codigo === document.getElementById('licProceso').value);
+        document.getElementById('licDocsTitle').textContent = proc
+          ? `Documentos para ${proc.nombre} — ${document.getElementById('licSubtipo').value}`
+          : 'Documentos requeridos';
+        document.getElementById('licDocsList').innerHTML = docs.length ? docs.map((d, i) => {
+          const cargado = licDocsCargadosTemp[i];
+          return `
+          <div class="doc-row">
+            <div class="doc-check ${cargado ? 'on' : ''}">${cargado ? '✓' : (i+1)}</div>
+            <div><div class="doc-name">${d[0]}</div><div class="doc-req">${d[1]}</div></div>
+            <span class="badge ${cargado ? 'ok' : 'warn'}">${cargado || 'Pendiente'}</span>
+            ${puedeEditar ? `<label class="doc-action" style="cursor:pointer; margin:0">Seleccionar archivo<input type="file" style="display:none" onchange="cargarDocLicencia(${i}, event)"></label>`
+                          : '<span class="doc-action" style="color:var(--text-faint)">Solo lectura</span>'}
+          </div>`;
+        }).join('') : '<div class="section-desc" style="margin:0">Seleccione un proceso de licenciamiento para ver su checklist de documentos.</div>';
+        document.getElementById('licDocsCounter').textContent = `${Object.keys(licDocsCargadosTemp).length} de ${docs.length} cargados`;
+        actualizarCompletitudLicencia();
+      }
+
+      function cargarDocLicencia(idx, evt){
+        const file = evt.target.files[0];
+        if (!file) return;
+        licDocsCargadosTemp[idx] = file.name;
+        renderLicDocs();
+      }
+      function agregarDocumentoLicencia(){
+        const nombre = prompt('Nombre del documento adicional:');
+        if (!nombre) return;
+        licDocsAdicionales.push([nombre, 'Documento adicional']);
+        renderLicDocs();
+      }
+
+      function populateLicCertificadorSelect(){
+        const sel = document.getElementById('licCertificador');
+        if (!sel) return;
+        const actual = sel.value;
+        sel.innerHTML = '<option value="">Seleccionar</option>' +
+          entesCertificadores.filter(e => e.estado === 'Activo').map(e => `<option value="${e.codigo}">${e.nombre}</option>`).join('');
+        sel.value = actual;
+      }
+
+      function renderContactosCertificador(){
+        const key = document.getElementById('licCertificador').value;
+        const panel = document.getElementById('licContactPanel');
+        const cert = entesCertificadores.find(e => e.codigo === key);
+        if (!cert){
+          panel.innerHTML = '<strong>Sin destinatarios seleccionados</strong><p>Seleccione el ente certificador para cargar sus responsables, correos y teléfonos registrados.</p>';
+        } else if (!cert.contactos.length){
+          panel.innerHTML = `<strong>${cert.nombre} — sin contactos registrados</strong><p>Agrégalos en Administración › Matriz Entes Certificadores antes de enviar el trámite.</p>`;
+        } else {
+          panel.innerHTML = cert.contactos.map(c =>
+            `<div class="contact-item"><strong>${c.nombre}</strong> · ${c.cargo}<br><span>${c.correo} · ${c.tel}</span></div>`).join('');
+        }
+        actualizarCompletitudLicencia();
+      }
+
+      function actualizarCompletitudLicencia(){
+        const docs = licDocsActuales();
+        const cargados = Object.keys(licDocsCargadosTemp).length;
+        const obligatorios = ['licProceso','licProductoRef','licPropietario','licFechaVencimiento','licCertificador'];
+        const llenos = obligatorios.filter(id => String(document.getElementById(id).value || '').trim()).length;
+
+        // Estado calculado en vivo mientras se editan las fechas
+        const est = estadoLicencia({
+          fechaInicio: document.getElementById('licFechaInicio').value,
+          fechaVencimiento: document.getElementById('licFechaVencimiento').value,
+        });
+        const campoEstado = document.getElementById('licEstadoCalculado');
+        campoEstado.value = est;
+        const dias = diasHastaVencimiento(document.getElementById('licFechaVencimiento').value);
+        if (dias !== null && dias >= 0 && dias <= DIAS_ALERTA_VENCIMIENTO) campoEstado.value = est + ' — faltan ' + dias + ' días';
+
+        const total = docs.length + obligatorios.length;
+        const pct = total ? Math.round((cargados + llenos) / total * 100) : 0;
+        document.getElementById('licProgressText').textContent = pct + '%';
+        document.getElementById('licProgressFill').style.width = pct + '%';
+        document.getElementById('licProgressFill').className = 'progress-fill' + (pct === 100 ? '' : ' warn');
+
+        const listo = docs.length && (cargados === docs.length) && (llenos === obligatorios.length);
+        const sendBtn = document.getElementById('licSendBtn');
+        sendBtn.disabled = !listo || !hasPermiso('licencias','editar');
+        sendBtn.className = 'btn ' + (sendBtn.disabled ? 'btn-disabled' : 'btn-primary');
+        document.getElementById('licValidationMsg').textContent = listo
+          ? 'Expediente completo. El correo puede enviarse a los contactos configurados.'
+          : 'Complete los campos obligatorios y cargue todos los documentos.';
+      }
+
+      function renderLicCierre(){
+        const puedeEditar = hasPermiso('licencias','editar');
+        document.getElementById('licClosingDocs').innerHTML = LIC_DOCS_CIERRE.map((d, i) => {
+          const cargado = licCierreCargadosTemp[i];
+          return `
+          <div class="doc-row">
+            <div class="doc-check ${cargado ? 'on' : ''}">${cargado ? '✓' : (i+1)}</div>
+            <div><div class="doc-name">${d[0]}</div><div class="doc-req">${d[1]}</div></div>
+            <span class="badge ${cargado ? 'ok' : 'warn'}">${cargado || 'Pendiente'}</span>
+            ${puedeEditar ? `<label class="doc-action" style="cursor:pointer; margin:0">${i===2?'Seleccionar imágenes':'Seleccionar archivo'}<input type="file" ${i===2?'multiple accept="image/*"':''} style="display:none" onchange="cargarDocCierre(${i}, event)"></label>`
+                          : '<span class="doc-action" style="color:var(--text-faint)">Solo lectura</span>'}
+          </div>`;
+        }).join('');
+        const n = Object.keys(licCierreCargadosTemp).length;
+        document.getElementById('licClosingText').textContent = `${n} de 3`;
+        document.getElementById('licClosingFill').style.width = Math.round(n/3*100) + '%';
+        const closeBtn = document.getElementById('licCloseBtn');
+        closeBtn.disabled = (n < 3) || !hasPermiso('licencias','editar');
+        closeBtn.className = 'btn ' + (closeBtn.disabled ? 'btn-disabled' : 'btn-primary');
+      }
+      function cargarDocCierre(idx, evt){
+        const files = evt.target.files;
+        if (!files.length) return;
+        licCierreCargadosTemp[idx] = files.length > 1 ? `${files.length} archivos` : files[0].name;
+        renderLicCierre();
+      }
+
+      function renderLicVersiones(){
+        const l = licEditingId ? licencias.find(x => x.id === licEditingId) : null;
+        const tbody = document.getElementById('licVersionesBody');
+        const btnRenovar = document.getElementById('btnRenovarLic');
+        if (btnRenovar) btnRenovar.style.display = (l && hasPermiso('licencias','editar')) ? 'inline-block' : 'none';
+        if (!l){
+          tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--text-faint)">El histórico aparece al guardar el trámite</td></tr>';
+          return;
+        }
+        const vigente = l.numero ? [{ numero:l.numero, ente:l.certificador, inicio:l.fechaInicio, vencimiento:l.fechaVencimiento,
+          estado: estadoLicencia(l), archivo: l.cierreCargados?.[0] || '—', esActual:true }] : [];
+        const todas = [...vigente, ...(l.versiones || [])];
+        tbody.innerHTML = todas.map(v => `
+          <tr>
+            <td>${v.numero}${v.esActual ? ' <span class="badge blue">Actual</span>' : ''}</td>
+            <td>${enteNombre(v.ente)}</td>
+            <td>${v.inicio || '—'} → ${v.vencimiento || 'sin definir'}</td>
+            <td><span class="badge ${badgeEstadoLicencia(v.estado)}">${v.estado}</span></td>
+            <td>${v.archivo && v.archivo !== '—' ? '📎 ' + v.archivo : '—'}</td>
+          </tr>`).join('') || '<tr><td colspan="5" style="text-align:center; color:var(--text-faint)">Sin certificados registrados todavía</td></tr>';
+      }
+
+      function iniciarRenovacion(){
+        const l = licencias.find(x => x.id === licEditingId);
+        if (!l) return;
+        if (!confirm(`Se archivará el certificado ${l.numero || '(sin número)'} en el histórico y se abrirá una renovación para ${l.referencia}. ¿Continuar?`)) return;
+        if (l.numero){
+          l.versiones = l.versiones || [];
+          l.versiones.unshift({ numero:l.numero, ente:l.certificador, inicio:l.fechaInicio,
+            vencimiento:l.fechaVencimiento, estado:'Vencida', archivo: l.cierreCargados?.[0] || '—' });
+        }
+        const now = new Date().toISOString().slice(0,16).replace('T',' ');
+        Object.assign(l, { numero:'', fechaInicio:'', fechaVencimiento:'', etapa:'Documentos', docsCargados:{}, cierreCargados:{} });
+        l.historial.unshift({fecha: now, accion:'Inició renovación — certificado anterior archivado en el histórico', usuario:'Esteban Torres'});
+        renderLicencias();
+        viewLicencia(l.id);
+        alert('Renovación iniciada. Carga los documentos y usa "Enviar al certificador" para radicar la aplicación.');
+      }
+
+      // El producto es la base: Licencias no inventa referencias, las toma de
+      // productos codificados. Nombre y proveedor se traen del maestro.
+      function populateLicProductoSelect(){
+        const sel = document.getElementById('licProductoRef');
+        if (typeof productos === 'undefined') return;
+        const actual = sel.value;
+        sel.innerHTML = '<option value="">Seleccionar producto codificado</option>' +
+          productos.filter(p => p.estado === 'Activo')
+            .map(p => `<option value="${p.codigo}">${p.codigo} — ${p.nombre}</option>`).join('');
+        sel.value = actual;
+      }
+
+      function onSeleccionProductoLicencia(){
+        const codigo = document.getElementById('licProductoRef').value;
+        const prod = (typeof productos !== 'undefined') ? productos.find(p => p.codigo === codigo) : null;
+        document.getElementById('licReferencia').value = prod ? prod.codigo : '';
+        document.getElementById('licProducto').value = prod ? prod.nombre : '';
+        populateLicProveedorSelect();
+        document.getElementById('licProveedor').value = prod ? (prod.proveedorCodigo || '') : '';
+        actualizarCompletitudLicencia();
+      }
+
+      function populateLicProveedorSelect(){
+        const sel = document.getElementById('licProveedor');
+        if (typeof proveedores === 'undefined') return;
+        sel.innerHTML = '<option value="">—</option>' +
+          proveedores.map(pr => `<option value="${pr.codigo}">${pr.razonSocial}</option>`).join('');
+      }
+
+      function openLicenciaForm(){
+        licEditingId = null;
+        document.getElementById('licFormBadge').textContent = 'Nuevo trámite · Borrador';
+        ['licProducto','licReferencia','licNumero','licFechaInicio','licFechaVencimiento','licObservaciones']
+          .forEach(id => document.getElementById(id).value = '');
+        document.getElementById('licPropietario').value = 'JLC ELECTRONICS';
+        document.getElementById('licCertificador').value = '';
+        populateLicProcesoSelect();
+        document.getElementById('licProceso').value = '';
+        populateLicSubtipoSelect();
+        populateLicProductoSelect();
+        document.getElementById('licProductoRef').value = '';
+        onSeleccionProductoLicencia();
+        populateLicCertificadorSelect();
+        licDocsCargadosTemp = {}; licCierreCargadosTemp = {}; licDocsAdicionales = [];
+        renderLicDocs();
+        renderContactosCertificador();
+        renderLicCierre();
+        renderLicVersiones();
+        document.getElementById('licFormSection').style.display = 'block';
+        document.getElementById('licHistoryBox').style.display = 'none';
+        applyLicenciaFormPermission();
+        document.getElementById('licProducto').focus();
+      }
+      function closeLicenciaForm(){ document.getElementById('licFormSection').style.display = 'none'; }
+
+      function saveLicencia(){
+        const referencia = document.getElementById('licProductoRef').value;
+        if (!referencia){ alert('Debes seleccionar un producto codificado. Si no existe, créalo primero en el módulo de Productos.'); return; }
+        const data = {
+          proceso: document.getElementById('licProceso').value,
+          subtipo: document.getElementById('licSubtipo').value,
+          producto: document.getElementById('licProducto').value.trim(),
+          referencia,
+          proveedorCodigo: document.getElementById('licProveedor').value,
+          numero: document.getElementById('licNumero').value.trim(),
+          propietario: document.getElementById('licPropietario').value.trim(),
+          fechaInicio: document.getElementById('licFechaInicio').value,
+          fechaVencimiento: document.getElementById('licFechaVencimiento').value,
+          certificador: document.getElementById('licCertificador').value,
+          observaciones: document.getElementById('licObservaciones').value.trim(),
+          docsCargados: {...licDocsCargadosTemp},
+          cierreCargados: {...licCierreCargadosTemp},
+        };
+        const now = new Date().toISOString().slice(0,16).replace('T',' ');
+        if (licEditingId){
+          const idx = licencias.findIndex(l => l.id === licEditingId);
+          licencias[idx] = { ...licencias[idx], ...data };
+          licencias[idx].historial.unshift({fecha: now, accion:'Actualizó el trámite', usuario:'Esteban Torres'});
+        } else {
+          const nextNum = 1 + Math.max(0, ...licencias.map(l => parseInt(String(l.id).split('-')[1], 10) || 0));
+          licencias.push({ id:'LIC-' + String(nextNum).padStart(4,'0'), ...data, etapa:'Documentos', versiones:[],
+            historial:[{fecha: now, accion:'Creó el trámite en estado Borrador', usuario:'Esteban Torres'}] });
+        }
+        renderLicencias();
+        closeLicenciaForm();
+      }
+
+      function enviarLicencia(){
+        const cert = entesCertificadores.find(e => e.codigo === document.getElementById('licCertificador').value);
+        if (!cert || !cert.contactos.length){
+          alert('Este ente certificador no tiene contactos registrados en la Matriz de Entes Certificadores — no hay a quién enviar el correo.');
+          return;
+        }
+        const l = licEditingId ? licencias.find(x => x.id === licEditingId) : null;
+        const esRenovacion = !!(l && l.versiones && l.versiones.length);
+        const proc = procesosLicencia.find(p => p.codigo === document.getElementById('licProceso').value);
+        const asunto = (esRenovacion ? 'Renovación' : 'Aplicación') + ' ' + (proc ? proc.nombre : '') + ' — ' + document.getElementById('licReferencia').value;
+        alert('Correo enviado a ' + cert.nombre + '.\n\nAsunto: ' + asunto + '\nPara: ' + cert.contactos.map(c => c.nombre + ' <' + c.correo + '>').join(', ') + '\n\nSe adjuntan los documentos cargados del expediente.');
+        if (l){
+          const now = new Date().toISOString().slice(0,16).replace('T',' ');
+          l.historial.unshift({fecha: now, accion:'Envió ' + (esRenovacion ? 'renovación' : 'aplicación') + ' a ' + cert.nombre, usuario:'Esteban Torres'});
+        }
+        saveLicencia();
+      }
+
+      function cerrarCertificacion(){
+        document.getElementById('licClosingStatus').textContent = 'Certificación cerrada';
+        document.getElementById('licClosingStatus').className = 'badge ok';
+      }
+
+      function viewLicencia(id){
+        const l = licencias.find(x => x.id === id);
+        if (!l) return;
+        licEditingId = l.id;
+        document.getElementById('licFormBadge').textContent = (l.numero || l.referencia) + ' · ' + estadoLicencia(l);
+        populateLicProcesoSelect();
+        document.getElementById('licProceso').value = l.proceso || '';
+        populateLicSubtipoSelect();
+        document.getElementById('licSubtipo').value = l.subtipo || '';
+        populateLicProductoSelect();
+        document.getElementById('licProductoRef').value = l.referencia || '';
+        onSeleccionProductoLicencia();
+        document.getElementById('licNumero').value = l.numero || '';
+        document.getElementById('licPropietario').value = l.propietario || 'JLC ELECTRONICS';
+        document.getElementById('licFechaInicio').value = l.fechaInicio || '';
+        document.getElementById('licFechaVencimiento').value = l.fechaVencimiento || '';
+        populateLicCertificadorSelect();
+        document.getElementById('licCertificador').value = l.certificador || '';
+        document.getElementById('licObservaciones').value = l.observaciones || '';
+        licDocsCargadosTemp = {...(l.docsCargados || {})};
+        licCierreCargadosTemp = {...(l.cierreCargados || {})};
+        licDocsAdicionales = [];
+        renderLicDocs();
+        renderContactosCertificador();
+        renderLicCierre();
+        renderLicVersiones();
+        document.getElementById('licFormSection').style.display = 'block';
+        document.getElementById('licHistoryBox').style.display = 'block';
+        document.getElementById('licHistoryLog').innerHTML = l.historial.map(h => `
+          <div class="hist-row"><span class="hist-time">${h.fecha}</span><span class="hist-action">${h.accion}</span><span class="hist-user">${h.usuario}</span></div>
+        `).join('');
+        applyLicenciaFormPermission();
+      }
+
+      function applyLicenciaFormPermission(){
+        const puedeEditar = hasPermiso('licencias','editar');
+        document.getElementById('licFormSection').querySelectorAll('input, select, textarea').forEach(el => { el.disabled = !puedeEditar; });
+        document.getElementById('licEstadoCalculado').disabled = true;
+        document.getElementById('licSaveBtn').style.display = puedeEditar ? 'inline-block' : 'none';
+        document.getElementById('btnAgregarDocLic').style.display = puedeEditar ? 'inline-block' : 'none';
+        document.getElementById('licReadonlyNotice').style.display = puedeEditar ? 'none' : 'block';
+        renderLicDocs();
+        renderLicCierre();
+        renderLicVersiones();
+      }
+
+      // ---- Reporte detallado descargable ----
+      async function exportarReporteLicencias(){
+        if (typeof ExcelJS === 'undefined'){ alert('No se pudo cargar la librería de Excel.'); return; }
+        const wb = new ExcelJS.Workbook();
+        const ws = wb.addWorksheet('Licencias');
+        ws.columns = [
+          {header:'Proceso', key:'proceso', width:26},
+          {header:'Tipo de trámite', key:'subtipo', width:20},
+          {header:'Producto', key:'producto', width:30},
+          {header:'Referencia', key:'referencia', width:20},
+          {header:'N° licencia', key:'numero', width:18},
+          {header:'Ente certificador', key:'ente', width:20},
+          {header:'Inicio vigencia', key:'inicio', width:14},
+          {header:'Vencimiento', key:'vencimiento', width:14},
+          {header:'Días restantes', key:'dias', width:14},
+          {header:'Estado', key:'estado', width:13},
+          {header:'Renovaciones previas', key:'versiones', width:18},
+        ];
+        ws.getRow(1).font = {name:'Arial', size:9, bold:true, color:{argb:'FFFFFFFF'}};
+        ws.getRow(1).fill = {type:'pattern', pattern:'solid', fgColor:{argb:'FF10274A'}};
+        ws.getRow(1).height = 24;
+        ws.getRow(1).alignment = {vertical:'center', wrapText:true};
+
+        licencias.forEach(l => {
+          const dias = diasHastaVencimiento(l.fechaVencimiento);
+          const est = estadoLicencia(l);
+          const row = ws.addRow({
+            proceso: procesoNombre(l.proceso), subtipo: l.subtipo || '', producto: l.producto || '',
+            referencia: l.referencia, numero: l.numero || '', ente: enteNombre(l.certificador),
+            inicio: l.fechaInicio || '', vencimiento: l.fechaVencimiento || '',
+            dias: dias === null ? '' : dias, estado: est,
+            versiones: (l.versiones || []).length,
+          });
+          const color = est === 'Vencida' ? 'FFFCEAEC' : (est === 'Por vencer' ? 'FFFBF1E2' : (est === 'Activa' ? 'FFE5F5F0' : 'FFF2F2F2'));
+          row.eachCell(c => { c.fill = {type:'pattern', pattern:'solid', fgColor:{argb:color}}; c.font = {name:'Arial', size:9}; });
+        });
+
+        // Hoja con el histórico completo de renovaciones
+        const ws2 = wb.addWorksheet('Histórico de certificados');
+        ws2.columns = [
+          {header:'Referencia', key:'ref', width:20},{header:'Proceso', key:'proc', width:24},
+          {header:'N° certificado', key:'num', width:20},{header:'Ente', key:'ente', width:20},
+          {header:'Inicio', key:'ini', width:14},{header:'Vencimiento', key:'ven', width:14},{header:'Estado', key:'est', width:13},
+        ];
+        ws2.getRow(1).font = {name:'Arial', size:9, bold:true, color:{argb:'FFFFFFFF'}};
+        ws2.getRow(1).fill = {type:'pattern', pattern:'solid', fgColor:{argb:'FF10274A'}};
+        licencias.forEach(l => (l.versiones || []).forEach(v => {
+          ws2.addRow({ ref:l.referencia, proc:procesoNombre(l.proceso), num:v.numero, ente:enteNombre(v.ente),
+            ini:v.inicio, ven:v.vencimiento, est:v.estado });
+        }));
+
+        const buffer = await wb.xlsx.writeBuffer();
+        const blob = new Blob([buffer], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = 'Reporte_Licencias_JLC.xlsx'; a.click();
+        URL.revokeObjectURL(url);
+      }
+
+      renderLicencias();
+    </script>
 
     <!-- ============ PURCHASE ORDER ============ -->
     <div class="panel" id="panel-po">
@@ -1937,7 +2921,7 @@
           <tr><td class="row-module">Importadores</td><td><span class="chk"></span></td><td><span class="chk"></span></td><td><span class="chk"></span></td><td><span class="chk"></span></td><td><span class="chk"></span></td></tr>
           <tr><td class="row-module">Proveedores</td><td><span class="chk on">✓</span></td><td><span class="chk on">✓</span></td><td><span class="chk on">✓</span></td><td><span class="chk on">✓</span></td><td><span class="chk"></span></td></tr>
           <tr><td class="row-module">Productos</td><td><span class="chk on">✓</span></td><td><span class="chk on">✓</span></td><td><span class="chk on">✓</span></td><td><span class="chk"></span></td><td><span class="chk"></span></td></tr>
-          <tr><td class="row-module">Licencias RETIQ</td><td><span class="chk"></span></td><td><span class="chk"></span></td><td><span class="chk"></span></td><td><span class="chk"></span></td><td><span class="chk"></span></td></tr>
+          <tr><td class="row-module">Licencias</td><td><span class="chk"></span></td><td><span class="chk"></span></td><td><span class="chk"></span></td><td><span class="chk"></span></td><td><span class="chk"></span></td></tr>
           <tr><td class="row-module">Purchase Order</td><td><span class="chk on">✓</span></td><td><span class="chk on">✓</span></td><td><span class="chk"></span></td><td><span class="chk on">✓</span></td><td><span class="chk"></span></td></tr>
           <tr><td class="row-module">Proforma Invoice</td><td><span class="chk"></span></td><td><span class="chk"></span></td><td><span class="chk"></span></td><td><span class="chk"></span></td><td><span class="chk"></span></td></tr>
           <tr><td class="row-module">Pagos</td><td><span class="chk"></span></td><td><span class="chk"></span></td><td><span class="chk"></span></td><td><span class="chk"></span></td><td><span class="chk"></span></td></tr>
@@ -2125,6 +3109,293 @@
       renderAgenciasAduana();
     </script>
 
+    <!-- ============ MATRIZ ENTES CERTIFICADORES ============ -->
+    <div class="panel" id="panel-matentes">
+      <div class="toolbar">
+        <input class="search-input" id="enteSearch" placeholder="Buscar ente certificador..." oninput="renderEntes()">
+        <button class="btn btn-primary" onclick="openEnteForm()">+ Nuevo ente certificador</button>
+      </div>
+      <div class="section-desc">Los contactos registrados aquí son los destinatarios del correo cuando se envía una aplicación o una renovación desde el módulo de Licencias.</div>
+      <div class="table-card"><table>
+        <thead><tr><th>Código</th><th>Nombre</th><th>NIT</th><th>Tipos de certificación</th><th>Contactos</th><th>Estado</th><th>Acciones</th></tr></thead>
+        <tbody id="enteTableBody"></tbody>
+      </table></div>
+
+      <div class="section" id="enteFormSection" style="display:none">
+        <div class="section-title" id="enteFormTitle">Nuevo ente certificador</div>
+        <div class="alert-list" id="enteFormError" style="display:none">
+          <div class="alert-row on"><span class="ai">⚠</span> Nombre y NIT son obligatorios.</div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>Nombre *</label><input id="enteNombre"></div>
+          <div class="field"><label>NIT *</label><input id="enteNit" placeholder="900.000.000-0"></div>
+          <div class="field"><label>Tipos de certificación que gestiona</label><input id="enteTipos" placeholder="RETIQ, RETIE, producto"></div>
+          <div class="field"><label>Estado</label><select id="enteEstado"><option>Activo</option><option>Inactivo</option></select></div>
+        </div>
+
+        <div class="section-title" style="font-size:12.5px">Contactos <span style="font-weight:400; color:var(--text-faint)">— a estos correos se envían las aplicaciones y renovaciones</span></div>
+        <div class="doc-list" id="enteContactosList"></div>
+        <div class="field-row" style="margin-top:10px">
+          <div class="field"><label>Nombre</label><input id="enteContactoNombre"></div>
+          <div class="field"><label>Cargo</label><input id="enteContactoCargo" placeholder="Coordinador RETIQ"></div>
+          <div class="field"><label>Teléfono</label><input id="enteContactoTel"></div>
+          <div class="field"><label>Correo</label><input id="enteContactoCorreo" placeholder="nombre@ente.com"></div>
+        </div>
+        <div class="btn-row" style="justify-content:flex-start; margin-top:-4px">
+          <button class="btn btn-ghost" onclick="addEnteContacto()">+ Agregar contacto</button>
+        </div>
+
+        <div class="btn-row" style="margin-top:16px">
+          <button class="btn btn-ghost" onclick="closeEnteForm()">Cancelar</button>
+          <button class="btn btn-primary" onclick="saveEnte()">Guardar</button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      let enteEditingCodigo = null;
+      let enteContactosTemp = [];
+
+      function renderEntes(){
+        const term = (document.getElementById('enteSearch').value || '').toLowerCase();
+        const tbody = document.getElementById('enteTableBody');
+        const filtered = entesCertificadores.filter(e =>
+          e.nombre.toLowerCase().includes(term) || (e.tiposCertificacion || '').toLowerCase().includes(term)
+        );
+        tbody.innerHTML = filtered.map(e => `
+          <tr>
+            <td>${e.codigo}</td><td>${e.nombre}</td><td>${e.nit || '—'}</td><td>${e.tiposCertificacion || '—'}</td>
+            <td>${e.contactos.length ? e.contactos.length + ' contacto' + (e.contactos.length > 1 ? 's' : '') : '<span class="badge warn">Sin contactos</span>'}</td>
+            <td><span class="badge ${e.estado === 'Activo' ? 'ok' : 'gray'}">${e.estado}</span></td>
+            <td><span class="icon-btn icon-edit" onclick="editEnte('${e.codigo}')">✎</span></td>
+          </tr>
+        `).join('') || '<tr><td colspan="7" style="text-align:center; color:var(--text-faint)">Sin resultados</td></tr>';
+      }
+
+      function renderEnteContactosList(){
+        const list = document.getElementById('enteContactosList');
+        if (!enteContactosTemp.length){
+          list.innerHTML = '<div class="section-desc" style="margin:0">Sin contactos agregados todavía.</div>';
+          return;
+        }
+        list.innerHTML = enteContactosTemp.map((c, idx) => `
+          <div class="doc-row">
+            <div class="doc-check on">✓</div>
+            <div><div class="doc-name">${c.nombre} — ${c.cargo}</div><div class="doc-req">${c.correo} · ${c.tel || 'sin teléfono'}</div></div>
+            <span class="badge blue">Correo</span>
+            <span class="doc-action" style="color:var(--red)" onclick="removeEnteContacto(${idx})">Quitar</span>
+          </div>
+        `).join('');
+      }
+
+      function addEnteContacto(){
+        const nombre = document.getElementById('enteContactoNombre').value.trim();
+        const cargo = document.getElementById('enteContactoCargo').value.trim();
+        const tel = document.getElementById('enteContactoTel').value.trim();
+        const correo = document.getElementById('enteContactoCorreo').value.trim();
+        if (!nombre || !correo) return;
+        enteContactosTemp.push({ nombre, cargo, tel, correo });
+        ['enteContactoNombre','enteContactoCargo','enteContactoTel','enteContactoCorreo'].forEach(id => document.getElementById(id).value = '');
+        renderEnteContactosList();
+      }
+      function removeEnteContacto(idx){ enteContactosTemp.splice(idx,1); renderEnteContactosList(); }
+
+      function openEnteForm(){
+        enteEditingCodigo = null; enteContactosTemp = [];
+        document.getElementById('enteFormTitle').textContent = 'Nuevo ente certificador';
+        ['enteNombre','enteNit','enteTipos'].forEach(id => document.getElementById(id).value = '');
+        document.getElementById('enteEstado').value = 'Activo';
+        document.getElementById('enteFormError').style.display = 'none';
+        renderEnteContactosList();
+        document.getElementById('enteFormSection').style.display = 'block';
+        document.getElementById('enteNombre').focus();
+      }
+      function closeEnteForm(){ document.getElementById('enteFormSection').style.display = 'none'; }
+
+      function saveEnte(){
+        const nombre = document.getElementById('enteNombre').value.trim();
+        const nit = document.getElementById('enteNit').value.trim();
+        if (!nombre || !nit){ document.getElementById('enteFormError').style.display = 'block'; return; }
+        const data = {
+          nombre, nit,
+          tiposCertificacion: document.getElementById('enteTipos').value.trim(),
+          estado: document.getElementById('enteEstado').value,
+          contactos: [...enteContactosTemp],
+        };
+        if (enteEditingCodigo){
+          const idx = entesCertificadores.findIndex(e => e.codigo === enteEditingCodigo);
+          entesCertificadores[idx] = { ...entesCertificadores[idx], ...data };
+        } else {
+          const nextNum = 1 + Math.max(0, ...entesCertificadores.map(e => parseInt(e.codigo.split('-')[1], 10)));
+          entesCertificadores.push({ codigo:'ENT-' + String(nextNum).padStart(3,'0'), ...data });
+        }
+        renderEntes();
+        if (typeof populateLicCertificadorSelect === 'function') populateLicCertificadorSelect();
+        closeEnteForm();
+      }
+
+      function editEnte(codigo){
+        const e = entesCertificadores.find(x => x.codigo === codigo);
+        if (!e) return;
+        enteEditingCodigo = e.codigo;
+        enteContactosTemp = e.contactos.map(c => ({...c}));
+        document.getElementById('enteFormTitle').textContent = 'Editar — ' + e.nombre;
+        document.getElementById('enteNombre').value = e.nombre;
+        document.getElementById('enteNit').value = e.nit || '';
+        document.getElementById('enteTipos').value = e.tiposCertificacion || '';
+        document.getElementById('enteEstado').value = e.estado;
+        document.getElementById('enteFormError').style.display = 'none';
+        renderEnteContactosList();
+        document.getElementById('enteFormSection').style.display = 'block';
+      }
+
+      renderEntes();
+    </script>
+
+    <!-- ============ MATRIZ PROCESOS LICENCIA ============ -->
+    <div class="panel" id="panel-matprocesos">
+      <div class="toolbar">
+        <input class="search-input" id="procSearch" placeholder="Buscar proceso..." oninput="renderProcesos()">
+        <button class="btn btn-primary" onclick="openProcesoForm()">+ Nuevo proceso</button>
+      </div>
+      <div class="section-desc">Cada proceso define sus tipos de trámite y el checklist de documentos que se pedirá en el módulo de Licencias.</div>
+      <div class="table-card"><table>
+        <thead><tr><th>Código</th><th>Proceso</th><th>Descripción</th><th>Tipos de trámite</th><th>Documentos</th><th>Estado</th><th>Acciones</th></tr></thead>
+        <tbody id="procTableBody"></tbody>
+      </table></div>
+
+      <div class="section" id="procFormSection" style="display:none">
+        <div class="section-title" id="procFormTitle">Nuevo proceso de licenciamiento</div>
+        <div class="alert-list" id="procFormError" style="display:none">
+          <div class="alert-row on"><span class="ai">⚠</span> El nombre del proceso es obligatorio.</div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>Nombre del proceso *</label><input id="procNombre" placeholder="Ej. RAEE, CEPD, RETIQ"></div>
+          <div class="field" style="grid-column:span 2"><label>Descripción</label><input id="procDescripcion" placeholder="Qué cubre este licenciamiento"></div>
+          <div class="field"><label>Estado</label><select id="procEstado"><option>Activo</option><option>Inactivo</option></select></div>
+        </div>
+
+        <div class="section-title" style="font-size:12.5px">Tipos de trámite y su checklist <span style="font-weight:400; color:var(--text-faint)">— cada tipo tiene su propia lista de documentos</span></div>
+        <div id="procSubtiposList"></div>
+        <div class="btn-row" style="justify-content:flex-start">
+          <button class="btn btn-ghost" onclick="agregarSubtipo()">+ Agregar tipo de trámite</button>
+        </div>
+
+        <div class="btn-row" style="margin-top:16px">
+          <button class="btn btn-ghost" onclick="closeProcesoForm()">Cancelar</button>
+          <button class="btn btn-primary" onclick="saveProceso()">Guardar proceso</button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      let procEditingCodigo = null;
+      let procSubtiposTemp = [];
+
+      function renderProcesos(){
+        const term = (document.getElementById('procSearch').value || '').toLowerCase();
+        document.getElementById('procTableBody').innerHTML = procesosLicencia
+          .filter(p => p.nombre.toLowerCase().includes(term) || (p.descripcion||'').toLowerCase().includes(term))
+          .map(p => {
+            const totalDocs = p.subtipos.reduce((s, st) => s + st.docs.length, 0);
+            return `
+            <tr>
+              <td>${p.codigo}</td><td><b>${p.nombre}</b></td><td>${p.descripcion || '—'}</td>
+              <td>${p.subtipos.map(s => s.nombre).join(', ')}</td>
+              <td class="num">${totalDocs}</td>
+              <td><span class="badge ${p.estado === 'Activo' ? 'ok' : 'gray'}">${p.estado}</span></td>
+              <td><span class="icon-btn icon-edit" onclick="editProceso('${p.codigo}')">✎</span></td>
+            </tr>`;
+          }).join('') || '<tr><td colspan="7" style="text-align:center; color:var(--text-faint)">Sin resultados</td></tr>';
+      }
+
+      function renderProcSubtipos(){
+        document.getElementById('procSubtiposList').innerHTML = procSubtiposTemp.map((st, i) => `
+          <div class="section" style="background:var(--input-bg); margin-bottom:12px">
+            <div class="toolbar" style="margin-bottom:8px">
+              <div class="field" style="flex:1; max-width:320px">
+                <label>Nombre del tipo de trámite</label>
+                <input value="${st.nombre}" oninput="procSubtiposTemp[${i}].nombre = this.value">
+              </div>
+              <span class="doc-action" style="color:var(--red); cursor:pointer" onclick="quitarSubtipo(${i})">Quitar tipo</span>
+            </div>
+            <div class="section-desc" style="margin-bottom:6px">Checklist de documentos (${st.docs.length}):</div>
+            <div class="doc-list">
+              ${st.docs.map((d, j) => `
+                <div class="doc-row" style="grid-template-columns:auto 1fr auto">
+                  <div class="doc-check">${j+1}</div>
+                  <div>
+                    <input value="${d[0]}" style="width:100%; border:1px solid var(--line); border-radius:6px; padding:6px 9px; font-size:12px; background:var(--card); color:var(--text); margin-bottom:4px" oninput="procSubtiposTemp[${i}].docs[${j}][0] = this.value">
+                    <input value="${d[1]}" placeholder="Formato esperado" style="width:100%; border:1px solid var(--line); border-radius:6px; padding:5px 9px; font-size:11px; background:var(--card); color:var(--text-dim)" oninput="procSubtiposTemp[${i}].docs[${j}][1] = this.value">
+                  </div>
+                  <span class="doc-action" style="color:var(--red); cursor:pointer" onclick="quitarDocSubtipo(${i},${j})">Quitar</span>
+                </div>`).join('')}
+            </div>
+            <div class="btn-row" style="justify-content:flex-start; margin-top:8px">
+              <button class="btn btn-ghost" onclick="agregarDocSubtipo(${i})">+ Agregar documento</button>
+            </div>
+          </div>
+        `).join('') || '<div class="section-desc">Agrega al menos un tipo de trámite con su checklist.</div>';
+      }
+
+      function agregarSubtipo(){ procSubtiposTemp.push({nombre:'Nuevo tipo', docs:[['Documento','PDF']]}); renderProcSubtipos(); }
+      function quitarSubtipo(i){ procSubtiposTemp.splice(i,1); renderProcSubtipos(); }
+      function agregarDocSubtipo(i){ procSubtiposTemp[i].docs.push(['Nuevo documento','PDF']); renderProcSubtipos(); }
+      function quitarDocSubtipo(i,j){ procSubtiposTemp[i].docs.splice(j,1); renderProcSubtipos(); }
+
+      function openProcesoForm(){
+        procEditingCodigo = null;
+        procSubtiposTemp = [{nombre:'Certificación', docs:[['Documento','PDF']]}];
+        document.getElementById('procFormTitle').textContent = 'Nuevo proceso de licenciamiento';
+        document.getElementById('procNombre').value = '';
+        document.getElementById('procDescripcion').value = '';
+        document.getElementById('procEstado').value = 'Activo';
+        document.getElementById('procFormError').style.display = 'none';
+        renderProcSubtipos();
+        document.getElementById('procFormSection').style.display = 'block';
+        document.getElementById('procNombre').focus();
+      }
+      function closeProcesoForm(){ document.getElementById('procFormSection').style.display = 'none'; }
+
+      function saveProceso(){
+        const nombre = document.getElementById('procNombre').value.trim();
+        if (!nombre){ document.getElementById('procFormError').style.display = 'block'; return; }
+        const data = {
+          nombre,
+          descripcion: document.getElementById('procDescripcion').value.trim(),
+          estado: document.getElementById('procEstado').value,
+          subtipos: procSubtiposTemp.map(st => ({nombre: st.nombre, docs: st.docs.map(d => [...d])})),
+        };
+        if (procEditingCodigo){
+          const idx = procesosLicencia.findIndex(p => p.codigo === procEditingCodigo);
+          procesosLicencia[idx] = { ...procesosLicencia[idx], ...data };
+        } else {
+          const nextNum = 1 + Math.max(0, ...procesosLicencia.map(p => parseInt(p.codigo.split('-')[1], 10)));
+          procesosLicencia.push({ codigo:'PRC-' + String(nextNum).padStart(3,'0'), ...data });
+        }
+        renderProcesos();
+        if (typeof renderLicencias === 'function') renderLicencias();
+        if (typeof populateLicProcesoSelect === 'function') populateLicProcesoSelect();
+        closeProcesoForm();
+      }
+
+      function editProceso(codigo){
+        const p = procesosLicencia.find(x => x.codigo === codigo);
+        if (!p) return;
+        procEditingCodigo = p.codigo;
+        procSubtiposTemp = p.subtipos.map(st => ({nombre: st.nombre, docs: st.docs.map(d => [...d])}));
+        document.getElementById('procFormTitle').textContent = 'Editar — ' + p.nombre;
+        document.getElementById('procNombre').value = p.nombre;
+        document.getElementById('procDescripcion').value = p.descripcion || '';
+        document.getElementById('procEstado').value = p.estado;
+        document.getElementById('procFormError').style.display = 'none';
+        renderProcSubtipos();
+        document.getElementById('procFormSection').style.display = 'block';
+      }
+
+      renderProcesos();
+    </script>
+
     <!-- ============ MATRIZ TRANSPORTADORAS ============ -->
     <div class="panel" id="panel-mattransp">
       <div class="toolbar"><input class="search-input" placeholder="Buscar transportadora..."><button class="btn btn-primary">+ Nueva transportadora</button></div>
@@ -2183,7 +3454,7 @@
       </div>
 
       <div class="phase-block">
-        <div class="phase-title">Licencias RETIQ</div>
+        <div class="phase-title">Licencias</div>
         <div class="step-chain">
           <div class="step-node"><div class="code">en_tramite</div><div class="label">En trámite</div><span class="actor">comercio_ext</span></div>
           <div class="step-node"><div class="code">en_certificador</div><div class="label">En ente certificador</div><span class="actor">certificador</span></div>
@@ -2211,7 +3482,7 @@
     importadores: ["Maestro de Importadores", "Empresas habilitadas para importar bajo la marca JLC Electronics"],
     proveedores: ["Vinculación de Proveedores", "Registro, condiciones comerciales y documentos por proveedor"],
     productos: ["Codificación de Productos", "Dimensiones, volumen automático, capacidad FCL y LCL"],
-    licencias: ["Licencias RETIQ", "Principal, sublicencia y cierre de certificación"],
+    licencias: ["Licencias", "Procesos de licenciamiento, vigencias y alertas de vencimiento"],
     po: ["Purchase Order", "Consecutivo, estados, ruta y resumen financiero"],
     correopo: ["Correo de Envío de PO", "Plantilla generada automáticamente en inglés"],
     pi: ["Proforma Invoice", "Extracción por IA y conciliación contra la PO"],
@@ -2223,6 +3494,8 @@
     usuarios: ["Usuarios", "Cuentas del sistema y perfil asignado"],
     perfiles: ["Perfiles y Permisos", "Qué puede hacer cada perfil, módulo por módulo"],
     mataduanas: ["Matriz de Agencias de Aduana", "Registro de agencias habilitadas"],
+    matentes: ["Matriz de Entes Certificadores", "Entes y sus contactos — a ellos se envían aplicaciones y renovaciones"],
+    matprocesos: ["Matriz de Procesos de Licenciamiento", "RETIQ, CEPD, RAEE y demás — con su checklist de documentos"],
     mattransp: ["Matriz de Transportadoras", "Registro de transportadoras y agentes de carga"],
     matestados: ["Matriz de Estados", "El flujo de cada módulo, editable sin tocar código"],
   };
